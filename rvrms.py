@@ -6,7 +6,7 @@ Radial Velocity uncertainty based off of signal in a somewhat idealized spectrog
 
 Also uses http://www.aanda.org/articles/aa/full/2001/29/aa1316/aa1316.right.html for reference.
 
-Current limitations: Does not consider vsini or actual detector SNR.
+Current limitations: Does not consider actual detector SNR, or vsini (mostly).
 '''
 
 # Beatty spectra (simulated): 100 A chunks; Solar metallicity;
@@ -23,7 +23,9 @@ Teff = 3400 #may need to interpolate between 2 later, as Beatty's table goes in 
 FeH = 0.0 #solar metallicity, can load from elsewhere
 logg = 4.5 #solar surface gravity, can load from elsewhere
 R = 100000 #actually varies with wavelength band, but...
-Q = 0 #Quality factor from summing up weights
+vsini = 1.0 #Low end placeholder, will use actual values if possible
+theta_rot = 1.13*vsini # Rough approximation, but rotational effects are near-linear, no matter limb-darkening.
+Q = 0 #Quality factor from summing up weights, ignoring SNR
 I_0 = 1 #1.0 is blatant lies, but theoretical approximation by Beatty and Gaudi. Intensity at a given velocity/wavelength element in terms of photons.
 # For a given element i, I_0 == SNR_pix^2 * n_pix / dV_chunk, need per-pixel SNR, number of pixels, and velocity span of the 100 Angstrom velocity chunk
 
@@ -35,7 +37,7 @@ for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
 		# need to consider SNR in each 100 A bin, especially per pixel. This is currently 1 photon per velocity element.
 		# 
 Q = 1/np.sqrt(Q)
-print("V_RMS (km/s):", Q)
+print("QualityV_RMS (km/s):", Q)
 
 # Metallicity effects on number of lines and their depth.
 v_FeH = 10**(-0.27*FeH) # f([Fe/H]), Fe/H = 0.0 is default, within 15% near-solar, biggest diff at -2
@@ -71,14 +73,9 @@ elif (Teff < 5000):
 	v_mac = 0.51
 theta_mac = np.sqrt(2*np.log(2))*v_mac #Need to get macroturbulence velocity emperically.
 
-#vsini, theta_v will be, er, interesting. Can estimate, but also use measured values?
-theta_rot = 0.0
-
-#I0 assumes R = inf, v_rot = 0, v_macroturbulence = 0, 1 photon per velocity element 
-#sigma_v = 1/np.sqrt(sum(I0/sigma_v**2)) * (0.5346*theta_0(Teff)/theta_0(Teff) + np.sqrt(0.2166*theta0**2+theta_R**2+0.518*theta_rot**2+thetaMac**2)/theta_0(Teff))**1.5 * f(Teff)*f(logg)*f(FeH)
-
 sigma_v = Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0)**1.5 * v_Teff * v_logg * v_FeH
 
+#debugging
 print("theta_0, theta_R, theta_rot, theta_mac")
 print(theta_0, theta_R, theta_rot, theta_mac)
 print("v_Teff, v_logg, v_FeH")
