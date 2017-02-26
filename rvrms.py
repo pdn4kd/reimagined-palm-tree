@@ -1,5 +1,7 @@
 #! /usr/bin/python
 import numpy as np
+from astropy import units as u
+from astropy import constants as c
 
 '''
 Radial Velocity uncertainty based off of signal in a somewhat idealized spectrograph, and stellar type. Equations and data from Beatty and Gaudi (2015). DOI: 10.1086/684264
@@ -13,34 +15,86 @@ Current limitations: Does not consider actual detector SNR, or vsini (mostly).
 # R = 100k (4000-6500 A), 165000 (6500-10000 A), 88000 (10000A - 25000 A)
 # In general need to specify wavelength range, as corrections vary with the one chosen (optical, red, near IR).
 # All velocities are in km/s
-# Table from http://www.personal.psu.edu/tgb15/beattygaudi/table1.dat
+# Table from http://www.personal.psu.edu/tgb15/beattygaudi/table1.dat but reformatted as a CSV.
 beatty = np.genfromtxt("table1.csv", dtype=None, delimiter=",", names=True)
 
 # Currently assuming a spectrometer entirely in the 'optical' range.
 λ_min = 4000
 λ_max = 6500
-Teff = 3400 #may need to interpolate between 2 later, as Beatty's table goes in 200 K chunks.
+Δλ = 100
+BeattyWaves = np.arange(4050, 6550, Δλ) #Optical range wavelength bits
+
+Teff = 2600 #may need to interpolate between 2 later, as Beatty's table goes in 200 K chunks.
 FeH = 0.0 #solar metallicity, can load from elsewhere
 logg = 4.5 #solar surface gravity, can load from elsewhere
 R = 100000 #actually varies with wavelength band, but...
 vsini = 2.0 #solarish placeholder, will use actual values if possible
 theta_rot = 1.13*vsini # Rough approximation, but rotational effects are near-linear, no matter limb-darkening.
+# need stellar diameter/distance (or apparent magnitude) correction
+mag = 12 #Are BT-Settl spectra for mag 0 stars?)
+
 Q = 0 #Quality factor from summing up weights, ignoring SNR
-I_0 = 1 #1.0 is blatant lies, but theoretical approximation by Beatty and Gaudi. Intensity at a given velocity/wavelength element in terms of photons.
+
+exptime = 300 * u.s #5 minutes
+efficiency = 0.1 # total optical system efficiency, currently includes CCD quantum efficiency
+telescope = 3.5 * u.m #diameter
+area = np.pi * (telescope/2)**2
+
+BTSettl = np.genfromtxt(str(Teff), dtype=float)
+# BT Settl spectra are labled by Teff
+# These spectra have a wavelength (Angstroms), and a flux (1e8 erg/s/cm^2/Angstrom) column
+# sum of flux(λ)*Δλ(λ)/1e8 == total flux (in power/area) emitted. Need radius^2/distance^2 for recieved.
+
+#De-duping
+model = [np.array([0,0])]
+for x in BTSettl:
+	if np.array_equal(x,model[-1]) == False:
+		model.append(x)
+
+I_0 = np.zeros((len(BeattyWaves), 2)) #Wavelength bin, and intensity at that velocity/wavelength element in terms of photons.
+for λ in np.arange(0, len(BeattyWaves)): #need some C-style array traversal.
+	for i in np.arange(0, len(model)-1):
+		if ((model[i][0] >= BeattyWaves[λ]) and (model[i][0] < BeattyWaves[λ]+Δλ) and (model[i][0] >= λ_min) and (model[i][0] <= λ_max)):
+			# fix: multiply by radius^2/dist^2 for brightness mod
+			# alternative rescaling, sum up power over eg: V-band -> PV
+			# PV/(k*10^(-0.4mv) = flux rescaling needed
+			# k is relevant conversion factor because Vega mags are terrible
+			power = (model[i][1]*1e-8*u.erg/u.cm**2/u.s/u.angstrom) * ((model[i+1][0]-model[i][0]) * u.angstrom)
+			photons = power * model[i][0] * u.angstrom / (c.h * c.c)
+			I_0[λ][1] += photons * area * efficiency * exptime
+			I_0[λ][0] = BeattyWaves[λ]
+print(I_0)
+
+#need resolution element to pixel conversion
+'''
+# per pixel
+gain = 4 # electrons generated per photon
+read_noise = 5 #RMS of +- spurious electrons
+dark_noise = 0
+efficiency = 0.1 # total optical system efficiency, currently includes CCD quantum efficiency
+n_pix = 5 # width of spectrum in pixels. Need length per 100 A chunk.
+SNR1 = photons*time1*gain / math.sqrt(photons*time1*gain + (gain*read_noise*2.2*2)**2 + dark_noise**2)
 # For a given element i, I_0 == SNR_pix^2 * n_pix / dV_chunk, need per-pixel SNR, number of pixels, and velocity span of the 100 Angstrom velocity chunk
+# dV_chunk == dlambda*c/R? (ie: ~3e-8 km/s)
+# SNR_pix should be SNR1
+# n_pix - need width (5?) and length per 100 A chunk. Presumably 1e-3 m.
+#dV_chunk = 
+#I_1 = SNR1**2 * n_pix/dV_chunk
+'''
 
 for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
 #if b[0] is in wavelength range, and b[1] is in Teff range, use the uncertainty
 	if ((b[0] >= λ_min) and (b[0] <= λ_max) and b[1] == Teff):
-		#print(b[2])
-		Q += I_0/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
+		for i in I_0:
+			if i[0] == b[0]:
+				Q += i[1]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
 		# need to consider SNR in each 100 A bin, especially per pixel. This is currently 1 photon per velocity element.
 		# 
 Q = 1/np.sqrt(Q)
-#print("QualityV_RMS (km/s):", Q)
+print("QualityV_RMS (km/s):", Q)
 
 # Metallicity effects on number of lines and their depth.
-v_FeH = 10**(-0.27*FeH) # f([Fe/H]), Fe/H = 0.0 is default, within 15% near-solar, biggest diff at -2
+v_FeH = 10**(-0.27*FeH) # within 15% for near-solar (-2 to 0.5), biggest diff at [Fe/H] = -2
 
 dTeff = Teff/5800 - 1
 
