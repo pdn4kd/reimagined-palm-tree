@@ -19,19 +19,22 @@ Current limitations: Does not consider actual detector SNR, or vsini (mostly).
 beatty = np.genfromtxt("table1.csv", dtype=None, delimiter=",", names=True)
 
 # Currently assuming a spectrometer entirely in the 'optical' range.
+# Optical is basically Johnson V-band, so m = 0 means 3460 Jy
 λ_min = 4000
 λ_max = 6500
 Δλ = 100
 BeattyWaves = np.arange(4050, 6550, Δλ) #Optical range wavelength bits
 
-Teff = 2600 #may need to interpolate between 2 later, as Beatty's table goes in 200 K chunks.
+Teff = 5800 #may need to interpolate between 2 later, as Beatty's table goes in 200 K chunks.
 FeH = 0.0 #solar metallicity, can load from elsewhere
 logg = 4.5 #solar surface gravity, can load from elsewhere
 R = 100000 #actually varies with wavelength band, but...
 vsini = 2.0 #solarish placeholder, will use actual values if possible
 theta_rot = 1.13*vsini # Rough approximation, but rotational effects are near-linear, no matter limb-darkening.
-# need stellar diameter/distance (or apparent magnitude) correction
-mag = 12 #Are BT-Settl spectra for mag 0 stars?)
+# need stellar diameter/distance (or apparent magnitude in wavelength range)
+# for correct brightness
+rstar = 1.0 * u.solRad
+dstar = 10.0 * u.pc
 
 Q = 0 #Quality factor from summing up weights, ignoring SNR
 
@@ -55,15 +58,15 @@ I_0 = np.zeros((len(BeattyWaves), 2)) #Wavelength bin, and intensity at that vel
 for λ in np.arange(0, len(BeattyWaves)): #need some C-style array traversal.
 	for i in np.arange(0, len(model)-1):
 		if ((model[i][0] >= BeattyWaves[λ]) and (model[i][0] < BeattyWaves[λ]+Δλ) and (model[i][0] >= λ_min) and (model[i][0] <= λ_max)):
-			# fix: multiply by radius^2/dist^2 for brightness mod
 			# alternative rescaling, sum up power over eg: V-band -> PV
 			# PV/(k*10^(-0.4mv) = flux rescaling needed
 			# k is relevant conversion factor because Vega mags are terrible
 			power = (model[i][1]*1e-8*u.erg/u.cm**2/u.s/u.angstrom) * ((model[i+1][0]-model[i][0]) * u.angstrom)
+			power *= rstar**2/dstar**2 #rescaling emitted spectrum based on stellar surface area and distance from us
 			photons = power * model[i][0] * u.angstrom / (c.h * c.c)
 			I_0[λ][1] += photons * area * efficiency * exptime
 			I_0[λ][0] = BeattyWaves[λ]
-print(I_0)
+print(I_0, sum(I_0[1]))
 
 #need resolution element to pixel conversion
 '''
@@ -87,6 +90,7 @@ for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
 	if ((b[0] >= λ_min) and (b[0] <= λ_max) and b[1] == Teff):
 		for i in I_0:
 			if i[0] == b[0]:
+				print(b[0], b[2])
 				Q += i[1]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
 		# need to consider SNR in each 100 A bin, especially per pixel. This is currently 1 photon per velocity element.
 		# 
