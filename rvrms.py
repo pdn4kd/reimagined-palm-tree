@@ -14,7 +14,6 @@ Current limitations: Does not consider actual detector SNR, or vsini (mostly).
 # Beatty spectra (simulated): 100 A chunks; Solar metallicity;
 # R = 100k (4000-6500 A), 165000 (6500-10000 A), 88000 (10000A - 25000 A)
 # In general need to specify wavelength range, as corrections vary with the one chosen (optical, red, near IR).
-# All velocities are in km/s
 # Table from http://www.personal.psu.edu/tgb15/beattygaudi/table1.dat but reformatted as a CSV.
 beatty = np.genfromtxt("table1.csv", dtype=None, delimiter=",", names=True)
 
@@ -36,8 +35,6 @@ theta_rot = 1.13*vsini # Rough approximation, but rotational effects are near-li
 rstar = 1.0 * u.solRad
 dstar = 10.0 * u.pc
 
-Q = 0 #Quality factor from summing up weights, ignoring SNR
-
 exptime = 300 * u.s #5 minutes
 efficiency = 0.1 # total optical system efficiency, currently includes CCD quantum efficiency
 telescope = 3.5 * u.m #diameter
@@ -46,29 +43,45 @@ area = np.pi * (telescope/2)**2
 BTSettl = np.genfromtxt(str(Teff), dtype=float)
 # BT Settl spectra are labled by Teff
 # These spectra have a wavelength (Angstroms), and a flux (1e8 erg/s/cm^2/Angstrom) column
-# sum of flux(λ)*Δλ(λ)/1e8 == total flux (in power/area) emitted. Need radius^2/distance^2 for recieved.
+# sum of flux(λ)*Δλ(λ)/1e8 == total flux (in power/area) emitted. 
+# Multiply bt stellar_radius^2/distance^2 for recieved.
 
-#De-duping
+#De-duping, this is not necessary if we redownload good spectra.
 model = [np.array([0,0])]
 for x in BTSettl:
 	if np.array_equal(x,model[-1]) == False:
 		model.append(x)
 
-I_0 = np.zeros((len(BeattyWaves), 2)) #Wavelength bin, and intensity at that velocity/wavelength element in terms of photons.
+I_0 = np.zeros((len(BeattyWaves), 4)) #Wavelength bin, intensity at that velocity/wavelength element in terms of power and photons, overall SNR.
 for λ in np.arange(0, len(BeattyWaves)): #need some C-style array traversal.
 	for i in np.arange(0, len(model)-1):
 		if ((model[i][0] >= BeattyWaves[λ]) and (model[i][0] < BeattyWaves[λ]+Δλ) and (model[i][0] >= λ_min) and (model[i][0] <= λ_max)):
 			# alternative rescaling, sum up power over eg: V-band -> PV
-			# PV/(k*10^(-0.4mv) = flux rescaling needed
+			# PV/(k*10^(-0.4mv)) = flux rescaling needed
 			# k is relevant conversion factor because Vega mags are terrible
 			power = (model[i][1]*1e-8*u.erg/u.cm**2/u.s/u.angstrom) * ((model[i+1][0]-model[i][0]) * u.angstrom)
 			power *= rstar**2/dstar**2 #rescaling emitted spectrum based on stellar surface area and distance from us
+			I_0[λ][1] += power.si * u.m**2/u.watt
 			photons = power * model[i][0] * u.angstrom / (c.h * c.c)
-			I_0[λ][1] += photons * area * efficiency * exptime
+			I_0[λ][2] += photons * area * efficiency * exptime
 			I_0[λ][0] = BeattyWaves[λ]
-print(I_0, sum(I_0[1]))
+print(I_0, sum(I_0[:,1]))
 
-#need resolution element to pixel conversion
+gain = 4 # electrons generated per photon
+read_noise = 5 #RMS of +- spurious electrons
+dark_current = 0 / u.s
+#convert photon intensities to electrons and therefore signal
+#Resolution elements: approximately 5 pix wide by 5 pix long for first guess -- 25 in total
+n_pix = 25
+# But a resolution element is not 100 A long
+# R = l/dl, so 1 resolution element at wavelength lambda is lambda/R wide
+# Or, a bin contains 100 A/(lambda/R) = 100A*R/lambda resolution elements
+for λ in np.arange(0, len(BeattyWaves)):
+	pix = n_pix*Δλ*R/I_0[λ][0]
+	# For now, assume equal signal per pixel. A gaussian would be better.
+	I_0[λ][3] = I_0[λ][2]/pix*gain / np.sqrt(I_0[λ][2]/pix*gain + (gain*read_noise*2.2*2)**2 + (dark_current*exptime)**2)
+
+
 '''
 # per pixel
 gain = 4 # electrons generated per photon
@@ -85,16 +98,17 @@ SNR1 = photons*time1*gain / math.sqrt(photons*time1*gain + (gain*read_noise*2.2*
 #I_1 = SNR1**2 * n_pix/dV_chunk
 '''
 
+Q = 0 # "Quality factor" -- summation of intensity/signal over default velocity uncertainty in each bin. Ignores error sources that are considered later.
 for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
 #if b[0] is in wavelength range, and b[1] is in Teff range, use the uncertainty
 	if ((b[0] >= λ_min) and (b[0] <= λ_max) and b[1] == Teff):
 		for i in I_0:
 			if i[0] == b[0]:
 				print(b[0], b[2])
-				Q += i[1]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
+				Q += i[3]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
 		# need to consider SNR in each 100 A bin, especially per pixel. This is currently 1 photon per velocity element.
 		# 
-Q = 1/np.sqrt(Q)
+Q = 1/np.sqrt(Q)#Quality factor from summing up weights, ignoring other noise sources
 print("QualityV_RMS (km/s):", Q)
 
 # Metallicity effects on number of lines and their depth.
