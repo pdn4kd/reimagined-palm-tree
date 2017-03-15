@@ -45,6 +45,7 @@ BTSettl = np.genfromtxt(str(Teff), dtype=float)
 # These spectra have a wavelength (Angstroms), and a flux (1e8 erg/s/cm^2/Angstrom) column
 # sum of flux(λ)*Δλ(λ)/1e8 == total flux (in power/area) emitted. 
 # Multiply bt stellar_radius^2/distance^2 for recieved.
+# Spectra downloaded from other sources will use different units!
 
 #De-duping, this is not necessary if we redownload good spectra.
 model = [np.array([0,0])]
@@ -118,21 +119,21 @@ dTeff = Teff/5800 - 1
 
 #v_logg, or f(log g)
 #m_opt = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #4500-6500 A
-#m_red = -0.33507*(1 - 1.41362*dTeff-4.63727*dTeff**2) #6500-10000 A
+#m_red = -0.33507*(1 - 1.41362*dTeff - 4.63727*dTeff**2) #6500-10000 A
 #m_nir = -0.43926*(1 - 1.12505*dTeff - 4.53938*dTeff**2) #10000-25000 A
 m = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #optical, 4500-6500 A
 v_logg = m*(logg-4.5)+1 # #f(log g), m varies with Teff and wavelength. Eqn only good for 4.0 to 5.0
 
 #v_teff, or f(Teff), effective temperature effects on number of lines and their depth.
-#v_teff_opt = 1 + 2.04515*dTeff+ 3.13362*dTeff**2+4.23845*dTeff**3
-#v_teff_red = 1 + 2.18311*dTeff+ 4.00361*dTeff**2+5.62077*dTeff**3
-#v_teff_nir = 1 + 1.62418*dTeff+ 2.62018*dTeff**2+5.01776*dTeff**3
-v_Teff = 1 + 2.04515*dTeff+ 3.13362*dTeff**2+4.23845*dTeff**3 #Optical
+#v_teff_opt = 1 + 2.04515*dTeff + 3.13362*dTeff**2 + 4.23845*dTeff**3
+#v_teff_red = 1 + 2.18311*dTeff + 4.00361*dTeff**2 + 5.62077*dTeff**3
+#v_teff_nir = 1 + 1.62418*dTeff + 2.62018*dTeff**2 + 5.01776*dTeff**3
+v_Teff = 1 + 2.04515*dTeff + 3.13362*dTeff**2 + 4.23845*dTeff**3 #Optical
 
 #theta0 also varies with wavelength choice
 #Θ0_opt = 5.10521*(1-0.6395*dTeff) #4000 to 6500 A
 #Θ0_red = 3.73956*(1-0.1449*dTeff) #6500 to 10000 A
-#Θ0_nir = 6.42622*(1-0.2737d*Teff ) #10000 to 25000 A
+#Θ0_nir = 6.42622*(1-0.2737*dTeff ) #10000 to 25000 A
 theta_0 = 5.10521*(1-0.6395*dTeff) #optical, 4000 to 6500 A
 
 theta_R = 299792.458/R #c/R in km/s
