@@ -53,7 +53,8 @@ for x in BTSettl:
 	if np.array_equal(x,model[-1]) == False:
 		model.append(x)
 
-I_0 = np.zeros((len(BeattyWaves), 4)) #Wavelength bin, intensity at that velocity/wavelength element in terms of power and photons, overall SNR.
+#I_0 = np.zeros((len(BeattyWaves), 4)) #Wavelength bin, intensity at that velocity/wavelength element in terms of power and photons, overall SNR.
+I_0 = np.zeros(len(BeattyWaves), dtype=[('wavelength','f4'),('intensity','f8'),('photons','f8'),('SNR','f8')])
 for λ in np.arange(0, len(BeattyWaves)): #need some C-style array traversal.
 	for i in np.arange(0, len(model)-1):
 		if ((model[i][0] >= BeattyWaves[λ]) and (model[i][0] < BeattyWaves[λ]+Δλ) and (model[i][0] >= λ_min) and (model[i][0] <= λ_max)):
@@ -66,11 +67,10 @@ for λ in np.arange(0, len(BeattyWaves)): #need some C-style array traversal.
 			photons = power * model[i][0] * u.angstrom / (c.h * c.c)
 			I_0[λ][2] += photons * area * efficiency * exptime
 			I_0[λ][0] = BeattyWaves[λ]
-print(I_0, sum(I_0[:,1]))
 
-gain = 4 # electrons generated per photon
-read_noise = 5 #RMS of +- spurious electrons
-dark_current = 0 / u.s
+gain = 1 # electrons generated per photon
+read_noise = 2.5 #RMS of +- spurious electrons
+dark_current = 4 / u.hour
 #convert photon intensities to electrons and therefore signal
 #Resolution elements: approximately 5 pix wide by 5 pix long for first guess -- 25 in total
 n_pix = 25
@@ -82,6 +82,9 @@ for λ in np.arange(0, len(BeattyWaves)):
 	# For now, assume equal signal per pixel. A gaussian would be better.
 	I_0[λ][3] = I_0[λ][2]/pix*gain / np.sqrt(I_0[λ][2]/pix*gain + (gain*read_noise*2.2*2)**2 + (dark_current*exptime)**2)
 
+print(I_0)
+#print(sum(I_0[:,1]), "W/m^2")
+print(sum(I_0['intensity']), "W/m^2")
 
 '''
 # per pixel
@@ -110,7 +113,7 @@ for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
 		# need to consider SNR in each 100 A bin, especially per pixel. This is currently 1 photon per velocity element.
 		# 
 Q = 1/np.sqrt(Q)#Quality factor from summing up weights, ignoring other noise sources
-print("QualityV_RMS (km/s):", Q)
+print("Noise-Free V_RMS (km/s):", Q)
 
 # Metallicity effects on number of lines and their depth.
 v_FeH = 10**(-0.27*FeH) # within 15% for near-solar (-2 to 0.5), biggest diff at [Fe/H] = -2
@@ -152,4 +155,4 @@ sigma_v = Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*thet
 #print(theta_0, theta_R, theta_rot, theta_mac)
 #print("v_Teff, v_logg, v_FeH")
 #print(v_Teff, v_logg, v_FeH)
-print("sigma_v", sigma_v)
+print("Stellar Noise V_RMS", sigma_v)
