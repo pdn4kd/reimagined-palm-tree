@@ -99,7 +99,7 @@ for λ in np.arange(0, len(BeattyWaves)):
 	pix = n_pix*Δλ*R/I_0[λ][0]
 	# For now, assume equal signal per pixel. A gaussian would be better.
 	I_0[λ][3] = I_0[λ][2]/pix*gain / np.sqrt(I_0[λ][2]/pix*gain + (gain*read_noise*2.2*2)**2 + (dark_current*exptime)**2)
-	I_0[λ][4] = I_0[λ][3]**2 * pix / (c.c/(u.km/u.s) * Δλ/I_0[λ][0])
+	I_0[λ][4] = I_0[λ][3]**2 * pix / ((c.c/(u.km/u.s)).si * Δλ/I_0[λ][0])
 
 print(I_0)
 #print(sum(I_0[:,1]), "W/m^2")
