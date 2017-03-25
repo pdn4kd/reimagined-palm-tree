@@ -14,8 +14,9 @@ Current limitations: Detector properties not closely based on actual hardware, n
 # Beatty spectra (simulated): 100 A chunks; Solar metallicity;
 # R = 100k (4000-6500 A), 165000 (6500-10000 A), 88000 (10000A - 25000 A)
 # In general need to specify wavelength range, as corrections vary with the one chosen (optical, red, near IR).
-# Table from http://www.personal.psu.edu/tgb15/beattygaudi/table1.dat but reformatted as a CSV.
-beatty = np.genfromtxt("table1.csv", dtype=None, delimiter=",", names=True)
+# Table from http://www.personal.psu.edu/tgb15/beattygaudi/table1.dat
+beatty = np.genfromtxt("table1.dat", dtype=None)
+beatty.dtype.names = ('Angstrom', 'Teff', 'Uncertaintykms')
 
 # Currently assuming a spectrometer entirely in the 'optical' range.
 # Optical is basically Johnson V-band, so m = 0 means 3460 Jy
