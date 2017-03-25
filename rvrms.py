@@ -8,7 +8,7 @@ Radial Velocity uncertainty based off of signal in a somewhat idealized spectrog
 
 Also uses http://www.aanda.org/articles/aa/full/2001/29/aa1316/aa1316.right.html for reference.
 
-Current limitations: Does not consider actual detector SNR, or vsini (mostly).
+Current limitations: Detector properties not closely based on actual hardware, need to double check vsini, microturbulence fixed at ~1 km/s, granulation/starspots/other jitter not considered.
 '''
 
 # Beatty spectra (simulated): 100 A chunks; Solar metallicity;
@@ -64,7 +64,7 @@ BTSettl = np.genfromtxt(str(Teff), dtype=float)
 # Multiply bt stellar_radius^2/distance^2 for recieved.
 # Spectra downloaded from other sources will use different units!
 
-#De-duping, this is not necessary if we redownload good spectra.
+#De-duping, this is not necessary if spectra are downloaded from another source.
 model = [np.array([0,0])]
 for x in BTSettl:
 	if np.array_equal(x,model[-1]) == False:
@@ -86,7 +86,7 @@ for λ in np.arange(0, len(BeattyWaves)): #need some C-style array traversal.
 			I_0[λ][0] = BeattyWaves[λ]
 
 gain = 1 # electrons generated per photon
-read_noise = 2.5 #RMS of +- spurious electrons
+read_noise = 2.5 #RMS of ± spurious electrons
 dark_current = 4 / u.hour
 #convert photon intensities to electrons and therefore signal
 #Resolution elements: approximately 5 pix wide by 5 pix long for first guess -- 25 in total
@@ -106,21 +106,6 @@ print(sum(I_0['intensity']), "W/m^2")
 I_SNR = sum(I_0['photons'])
 print("Total SNR", I_SNR/pix*gain / np.sqrt(I_SNR/pix*gain + (gain*read_noise*2.2*2)**2 + (dark_current*exptime)**2), "Average SNR", np.mean(I_0['SNR']))
 
-'''
-# per pixel
-gain = 4 # electrons generated per photon
-read_noise = 5 #RMS of +- spurious electrons
-dark_noise = 0
-efficiency = 0.1 # total optical system efficiency, currently includes CCD quantum efficiency
-n_pix = 5 # width of spectrum in pixels. Need length per 100 A chunk.
-SNR1 = photons*time1*gain / math.sqrt(photons*time1*gain + (gain*read_noise*2.2*2)**2 + dark_noise**2)
-# For a given element i, I_0 == SNR_pix^2 * n_pix / dV_chunk, need per-pixel SNR, number of pixels, and velocity span of the 100 Angstrom velocity chunk
-# dV_chunk == dlambda*c/R? (ie: ~3e-8 km/s)
-# SNR_pix should be SNR1
-# n_pix - need width (5?) and length per 100 A chunk. Presumably 1e-3 m.
-#dV_chunk = 
-#I_1 = SNR1**2 * n_pix/dV_chunk
-'''
 
 Q = 0 # "Quality factor" -- summation of intensity/signal over default velocity uncertainty in each bin. Ignores error sources that are considered later.
 for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
@@ -130,8 +115,6 @@ for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
 			if i[0] == b[0]:
 				print(b[0], b[2], 1/np.sqrt(i[4]/b[2]**2))
 				Q += i[4]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
-		# need to consider SNR in each 100 A bin, especially per pixel. This is currently 1 photon per velocity element.
-		# 
 Q = 1/np.sqrt(Q)#Quality factor from summing up weights, ignoring other noise sources
 print("Noise-Free V_RMS (km/s):", Q)
 
@@ -167,9 +150,11 @@ if (Teff > 5000) and (Teff < 7600):
 	v_mac = 1.976 + 16.14*dTeff + 19.713*dTeff**2
 elif (Teff < 5000):
 	v_mac = 0.51
-theta_mac = np.sqrt(2*np.log(2))*v_mac #Need to get macroturbulence velocity emperically.
+theta_mac = np.sqrt(2*np.log(2))*v_mac #Need to get macroturbulence velocity empirically.
 
+# "Final" value.
 sigma_v = Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0)**1.5 * v_Teff * v_logg * v_FeH
+
 
 #debugging
 print("theta_0, theta_R, theta_rot, theta_mac")
