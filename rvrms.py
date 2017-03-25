@@ -35,10 +35,27 @@ theta_rot = 1.13*vsini # Rough approximation, but rotational effects are near-li
 rstar = 1.0 * u.solRad
 dstar = 10.0 * u.pc
 
-exptime = 300 * u.s #5 minutes
+exptime = 300 * u.s
 efficiency = 0.1 # total optical system efficiency, currently includes CCD quantum efficiency
 telescope = 3.5 * u.m #diameter
 area = np.pi * (telescope/2)**2
+
+# Alpha Cen B test
+# How much do R and wavelength range matter?
+exptime = 10 * u.minute
+telescope = 3.6 * u.m
+area = np.pi * (telescope/2)**2
+efficiency = 0.1
+λ_min = 3800
+λ_max = 6800
+BeattyWaves = np.arange(3850, 6850, Δλ)
+R = 110000
+Teff = 5200 # 5214 K
+logg = 4.37
+FeH = 0.23
+rstar = 0.865 * u.solRad
+dstar = 1.3 * u.pc
+vsini = np.pi*rstar/(38.7*u.day) * u.s/u.km
 
 BTSettl = np.genfromtxt(str(Teff), dtype=float)
 # BT Settl spectra are labled by Teff
@@ -54,7 +71,7 @@ for x in BTSettl:
 		model.append(x)
 
 #I_0 = np.zeros((len(BeattyWaves), 4)) #Wavelength bin, intensity at that velocity/wavelength element in terms of power and photons, overall SNR.
-I_0 = np.zeros(len(BeattyWaves), dtype=[('wavelength','f4'),('intensity','f8'),('photons','f8'),('SNR','f8')])
+I_0 = np.zeros(len(BeattyWaves), dtype=[('wavelength','f4'),('intensity','f8'),('photons','f8'),('SNR','f8'),('real photons','f8')])
 for λ in np.arange(0, len(BeattyWaves)): #need some C-style array traversal.
 	for i in np.arange(0, len(model)-1):
 		if ((model[i][0] >= BeattyWaves[λ]) and (model[i][0] < BeattyWaves[λ]+Δλ) and (model[i][0] >= λ_min) and (model[i][0] <= λ_max)):
@@ -81,10 +98,13 @@ for λ in np.arange(0, len(BeattyWaves)):
 	pix = n_pix*Δλ*R/I_0[λ][0]
 	# For now, assume equal signal per pixel. A gaussian would be better.
 	I_0[λ][3] = I_0[λ][2]/pix*gain / np.sqrt(I_0[λ][2]/pix*gain + (gain*read_noise*2.2*2)**2 + (dark_current*exptime)**2)
+	I_0[λ][4] = I_0[λ][3]**2 * pix / (c.c/(u.km/u.s) * Δλ/I_0[λ][0])
 
 print(I_0)
 #print(sum(I_0[:,1]), "W/m^2")
 print(sum(I_0['intensity']), "W/m^2")
+I_SNR = sum(I_0['photons'])
+print("Total SNR", I_SNR/pix*gain / np.sqrt(I_SNR/pix*gain + (gain*read_noise*2.2*2)**2 + (dark_current*exptime)**2), "Average SNR", np.mean(I_0['SNR']))
 
 '''
 # per pixel
@@ -108,8 +128,8 @@ for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
 	if ((b[0] >= λ_min) and (b[0] <= λ_max) and b[1] == Teff):
 		for i in I_0:
 			if i[0] == b[0]:
-				print(b[0], b[2])
-				Q += i[3]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
+				print(b[0], b[2], 1/np.sqrt(i[4]/b[2]**2))
+				Q += i[4]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
 		# need to consider SNR in each 100 A bin, especially per pixel. This is currently 1 photon per velocity element.
 		# 
 Q = 1/np.sqrt(Q)#Quality factor from summing up weights, ignoring other noise sources
@@ -120,20 +140,21 @@ v_FeH = 10**(-0.27*FeH) # within 15% for near-solar (-2 to 0.5), biggest diff at
 
 dTeff = Teff/5800 - 1
 
-#v_logg, or f(log g)
+#log(g), or pressure broadening on linewidth (and velocity precision)
 #m_opt = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #4500-6500 A
 #m_red = -0.33507*(1 - 1.41362*dTeff - 4.63727*dTeff**2) #6500-10000 A
 #m_nir = -0.43926*(1 - 1.12505*dTeff - 4.53938*dTeff**2) #10000-25000 A
 m = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #optical, 4500-6500 A
 v_logg = m*(logg-4.5)+1 # #f(log g), m varies with Teff and wavelength. Eqn only good for 4.0 to 5.0
 
-#v_teff, or f(Teff), effective temperature effects on number of lines and their depth.
+#Effective temperature effects on number of lines and their depth.
 #v_teff_opt = 1 + 2.04515*dTeff + 3.13362*dTeff**2 + 4.23845*dTeff**3
 #v_teff_red = 1 + 2.18311*dTeff + 4.00361*dTeff**2 + 5.62077*dTeff**3
 #v_teff_nir = 1 + 1.62418*dTeff + 2.62018*dTeff**2 + 5.01776*dTeff**3
 v_Teff = 1 + 2.04515*dTeff + 3.13362*dTeff**2 + 4.23845*dTeff**3 #Optical
 
 #theta0 also varies with wavelength choice
+#theta0 is the inherent width of the Voigt profile
 #Θ0_opt = 5.10521*(1-0.6395*dTeff) #4000 to 6500 A
 #Θ0_red = 3.73956*(1-0.1449*dTeff) #6500 to 10000 A
 #Θ0_nir = 6.42622*(1-0.2737*dTeff ) #10000 to 25000 A
@@ -151,8 +172,11 @@ theta_mac = np.sqrt(2*np.log(2))*v_mac #Need to get macroturbulence velocity emp
 sigma_v = Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0)**1.5 * v_Teff * v_logg * v_FeH
 
 #debugging
-#print("theta_0, theta_R, theta_rot, theta_mac")
-#print(theta_0, theta_R, theta_rot, theta_mac)
-#print("v_Teff, v_logg, v_FeH")
-#print(v_Teff, v_logg, v_FeH)
+print("theta_0, theta_R, theta_rot, theta_mac")
+print(theta_0, theta_R, theta_rot, theta_mac)
+print("v_Teff, v_logg, v_FeH")
+print(v_Teff, v_logg, v_FeH)
 print("Stellar Noise V_RMS", sigma_v)
+
+print("No thetas:", Q*v_Teff*v_logg*v_FeH)
+print("theta_0", Q*v_Teff*v_logg*v_FeH*((0.5346*theta_0+np.sqrt(0.2166*theta_0**2))/theta_0)**1.5)
