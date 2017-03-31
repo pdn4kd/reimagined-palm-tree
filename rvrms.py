@@ -41,22 +41,25 @@ efficiency = 0.1 # total optical system efficiency, currently includes CCD quant
 telescope = 3.5 * u.m #diameter
 area = np.pi * (telescope/2)**2
 
-# Alpha Cen B test
+# Alpha Cen B test with HARPS
 # How much do R and wavelength range matter?
 exptime = 10 * u.minute
-telescope = 3.6 * u.m
-area = np.pi * (telescope/2)**2
-efficiency = 0.1
+telescope = 3.566 * u.m
+area = 8.8564 * u.m * u.m
+efficiency = 0.03 #could be ~1-3%, depending on what is measured
 λ_min = 3800
 λ_max = 6800
 BeattyWaves = np.arange(3850, 6850, Δλ)
-R = 110000
+R = 110000 #110k or 120k, depending on source
 Teff = 5200 # 5214 K
 logg = 4.37
 FeH = 0.23
 rstar = 0.865 * u.solRad
 dstar = 1.3 * u.pc
 vsini = np.pi*rstar/(38.7*u.day) * u.s/u.km
+print("vsini", vsini.si)
+# Detectors: fast and slow modes
+
 
 BTSettl = np.genfromtxt(str(Teff), dtype=float)
 # BT Settl spectra are labled by Teff
@@ -86,19 +89,32 @@ for λ in np.arange(0, len(BeattyWaves)): #need some C-style array traversal.
 			I_0[λ][2] += photons * area * efficiency * exptime
 			I_0[λ][0] = BeattyWaves[λ]
 
-gain = 1 # electrons generated per photon
-read_noise = 2.5 #RMS of ± spurious electrons
-dark_current = 4 / u.hour
-#convert photon intensities to electrons and therefore signal
+gain = 1.0 # electrons generated per photon
+read_noise = 1.0 #RMS of ± spurious electrons
+dark_current = 4 / u.hour #electrons per time
 #Resolution elements: approximately 5 pix wide by 5 pix long for first guess -- 25 in total
 n_pix = 25
-# But a resolution element is not 100 A long
+
+# HARPS
+#Jasmin/slow:
+#Linda/slow:
+#Jasmin/fast: 1.42 e-/ADU, 7.07e- RON
+#Linda/fast: 1.4 e-/ADU, 6.08 e- RON
+#Normal/slow: 2.00 ADU/e-, 2.9e- RON
+#Normal/fast: 0.75 ADU/e-, 4.9e- RON
+#HARPS
+gain = 1/1.42 # ADU/e-, assume 1:1 photon to electron generation
+read_noise = 7.07 #RMS of ± spurious electrons
+dark_current = 4 / u.hour
+n_pix = 4
+
+# A resolution element is not 100 A long!
 # R = l/dl, so 1 resolution element at wavelength lambda is lambda/R wide
 # Or, a bin contains 100 A/(lambda/R) = 100A*R/lambda resolution elements
 for λ in np.arange(0, len(BeattyWaves)):
 	pix = n_pix*Δλ*R/I_0[λ][0]
 	# For now, assume equal signal per pixel. A gaussian would be better.
-	I_0[λ][3] = I_0[λ][2]/pix*gain / np.sqrt(I_0[λ][2]/pix*gain + (gain*read_noise*2.2*2)**2 + (dark_current*exptime)**2)
+	I_0[λ][3] = I_0[λ][2]/pix*gain / np.sqrt(I_0[λ][2]/pix*gain + (gain*read_noise*2.2*2)**2 + (gain*dark_current*exptime)**2)
 	I_0[λ][4] = I_0[λ][3]**2 * pix / ((c.c/(u.km/u.s)).si * Δλ/I_0[λ][0])
 
 print(I_0)
@@ -114,10 +130,10 @@ for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
 	if ((b[0] >= λ_min) and (b[0] <= λ_max) and b[1] == Teff):
 		for i in I_0:
 			if i[0] == b[0]:
-				print(b[0], b[2], 1/np.sqrt(i[4]/b[2]**2))
+				#print(b[0], b[2], 1/np.sqrt(i[4]/b[2]**2))
 				Q += i[4]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
 Q = 1/np.sqrt(Q)#Quality factor from summing up weights, ignoring other noise sources
-print("Noise-Free V_RMS (km/s):", Q)
+print("Noise/Feh/logg-Free V_RMS (km/s):", Q)
 
 # Metallicity effects on number of lines and their depth.
 v_FeH = 10**(-0.27*FeH) # within 15% for near-solar (-2 to 0.5), biggest diff at [Fe/H] = -2
@@ -164,5 +180,9 @@ print("v_Teff, v_logg, v_FeH")
 print(v_Teff, v_logg, v_FeH)
 print("Stellar Noise V_RMS", sigma_v)
 
-print("No thetas:", Q*v_Teff*v_logg*v_FeH)
-print("theta_0", Q*v_Teff*v_logg*v_FeH*((0.5346*theta_0+np.sqrt(0.2166*theta_0**2))/theta_0)**1.5)
+#print("No thetas:", Q*v_Teff*v_logg*v_FeH)
+#print("theta_0", Q*v_Teff*v_logg*v_FeH*((0.5346*theta_0+np.sqrt(0.2166*theta_0**2))/theta_0)**1.5)
+v_logg = 1
+v_FeH = 1
+v_Teff = 1
+print(Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0)**1.5 * v_Teff * v_logg * v_FeH)
