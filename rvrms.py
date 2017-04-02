@@ -4,11 +4,11 @@ from astropy import units as u
 from astropy import constants as c
 
 '''
-Radial Velocity uncertainty based off of signal in a somewhat idealized spectrograph, and stellar type. Equations and data from Beatty and Gaudi (2015). DOI: 10.1086/684264
+Calculates SNR and RV precision, given telescope and stellar parameters. Radial Velocity uncertainty based off of signal in a somewhat idealized spectrograph, and stellar type. Stellar spectra are BT-Settl, if in a somewhat non-standard format. Other equations and data (http://www.personal.psu.edu/tgb15/beattygaudi/table1.dat) from Beatty and Gaudi (2015). DOI: 10.1086/684264
 
 Also uses http://www.aanda.org/articles/aa/full/2001/29/aa1316/aa1316.right.html for reference.
 
-Current limitations: Detector properties not closely based on actual hardware, need to double check vsini, microturbulence fixed at ~1 km/s, granulation/starspots/other jitter not considered.
+Current limitations: Detector properties not closely based on actual hardware, microturbulence fixed at ~1 km/s; granulation/starspots/other jitter not considered; fixed assumptions made of Teff (200 K steps) and spectrograph R values made based on wavelength range.
 '''
 
 # Beatty spectra (simulated): 100 A chunks; Solar metallicity;
@@ -46,7 +46,7 @@ area = np.pi * (telescope/2)**2
 exptime = 10 * u.minute
 telescope = 3.566 * u.m
 area = 8.8564 * u.m * u.m
-efficiency = 0.03 #could be ~1-3%, depending on what is measured
+efficiency = 0.02 #could be ~1-3%, depending on what is measured
 λ_min = 3800
 λ_max = 6800
 BeattyWaves = np.arange(3850, 6850, Δλ)
@@ -56,7 +56,8 @@ logg = 4.37
 FeH = 0.23
 rstar = 0.865 * u.solRad
 dstar = 1.3 * u.pc
-vsini = np.pi*rstar/(38.7*u.day) * u.s/u.km
+vsini = 2*np.pi*rstar/(38.7*u.day) * u.s/u.km
+theta_rot = 1.13*vsini.si
 print("vsini", vsini.si)
 # Detectors: fast and slow modes
 
@@ -96,8 +97,8 @@ dark_current = 4 / u.hour #electrons per time
 n_pix = 25
 
 # HARPS
-#Jasmin/slow:
-#Linda/slow:
+#Jasmin/slow: 0.63 e/ADU, 2.87e- RON
+#Linda/slow: N/A?
 #Jasmin/fast: 1.42 e-/ADU, 7.07e- RON
 #Linda/fast: 1.4 e-/ADU, 6.08 e- RON
 #Normal/slow: 2.00 ADU/e-, 2.9e- RON
