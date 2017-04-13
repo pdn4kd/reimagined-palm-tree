@@ -4,8 +4,6 @@ from astropy import units as u
 from astropy import constants as c
 
 '''
-Python 2 compatable variant (no greek in variable names)
-
 Calculates SNR and RV precision, given telescope and stellar parameters. Radial Velocity uncertainty based off of signal in a somewhat idealized spectrograph, and stellar type. Stellar spectra are BT-Settl, if in a somewhat non-standard format. Other equations and data (http://www.personal.psu.edu/tgb15/beattygaudi/table1.dat) from Beatty and Gaudi (2015). DOI: 10.1086/684264
 
 Also uses http://www.aanda.org/articles/aa/full/2001/29/aa1316/aa1316.right.html for reference.
@@ -27,7 +25,7 @@ lam_max = 6500
 dellam = 100
 BeattyWaves = np.arange(4050, 6550, dellam) #Optical range wavelength bits
 
-Teff = 5800 #may need to interpolate between 2 later, as Beatty's table goes in 200 K chunks.
+Teff = 5800 #may need to interpolate between 2 later, as Beatty's table goes in 200 K chunks. But BT-Settl are in 100 K chunks.
 FeH = 0.0 #solar metallicity, can load from elsewhere
 logg = 4.5 #solar surface gravity, can load from elsewhere
 R = 100000 #actually varies with wavelength band, but...
@@ -38,6 +36,11 @@ theta_rot = 1.13*vsini # Rough approximation, but rotational effects are near-li
 rstar = 1.0 * u.solRad
 dstar = 10.0 * u.pc
 
+#atmospheric opacity is, uh, problematic. An innacurate, but better than nothing assumption of optical depth being ~0.11/airmass is used. Airmass amount uses sec(zenith_angle) because this is accurate over the ranges that telescopes actually point.
+zenith_angle = 0 # Can be read in from stellar observations!
+tau = 0.11 # Should vary per wavelength bin.
+opacity = np.exp(-tau/np.cos(zenith_angle))
+
 exptime = 300 * u.s
 efficiency = 0.1 # total optical system efficiency, currently includes CCD quantum efficiency
 telescope = 3.5 * u.m #diameter
@@ -45,7 +48,7 @@ area = np.pi * (telescope/2)**2
 
 # Alpha Cen B test with HARPS
 # How much do R and wavelength range matter?
-exptime = 10 * u.minute
+exptime = 3 * u.minute # Nominally 10 minutes, but ~25-30% duty cycle
 telescope = 3.566 * u.m
 area = 8.8564 * u.m * u.m
 efficiency = 0.02 #could be ~1-3%, depending on what is measured
@@ -53,7 +56,7 @@ lam_min = 3800
 lam_max = 6800
 BeattyWaves = np.arange(3850, 6850, dellam)
 R = 110000 #110k or 120k, depending on source
-Teff = 5200 # 5214 K
+Teff = 5214 # 5214 K
 logg = 4.37
 FeH = 0.23
 rstar = 0.865 * u.solRad
@@ -64,8 +67,9 @@ print("vsini", vsini.si)
 # Detectors: fast and slow modes
 
 
-BTSettl = np.genfromtxt(str(Teff), dtype=float)
-# BT Settl spectra are labled by Teff
+BTSettl = np.genfromtxt(str(round(Teff,-2)), dtype=float)
+print("Teff:", Teff, " BT-Settl:", round(Teff,-2), " Beatty RV:", round(Teff/200)*200)
+# BT Settl spectra are labled by Teff, and available every 100 K.
 # These spectra have a wavelength (Angstroms), and a flux (1e8 erg/s/cm^2/Angstrom) column
 # sum of flux(lam)*dellam(lam)/1e8 == total flux (in power/area) emitted. 
 # Multiply bt stellar_radius^2/distance^2 for recieved.
@@ -87,13 +91,15 @@ for lam in np.arange(0, len(BeattyWaves)): #need some C-style array traversal.
 			# k is relevant conversion factor because Vega mags are terrible
 			power = (model[i][1]*1e-8*u.erg/u.cm**2/u.s/u.angstrom) * ((model[i+1][0]-model[i][0]) * u.angstrom)
 			power *= rstar**2/dstar**2 #rescaling emitted spectrum based on stellar surface area and distance from us
+			#Opacity is treated as universal, but is not. Need to calc per wavelength later.
+			power *= opacity #rescaling because of atmosphere.
 			I_0[lam][1] += power.si * u.m**2/u.watt
 			photons = power * model[i][0] * u.angstrom / (c.h * c.c)
 			I_0[lam][2] += photons * area * efficiency * exptime
 			I_0[lam][0] = BeattyWaves[lam]
 
 gain = 1.0 # electrons generated per photon
-read_noise = 1.0 #RMS of +- spurious electrons
+read_noise = 1.0 #RMS of ± spurious electrons
 dark_current = 4 / u.hour #electrons per time
 #Resolution elements: approximately 5 pix wide by 5 pix long for first guess -- 25 in total
 n_pix = 25
@@ -107,7 +113,7 @@ n_pix = 25
 #Normal/fast: 0.75 ADU/e-, 4.9e- RON
 #HARPS
 gain = 1/1.42 # ADU/e-, assume 1:1 photon to electron generation
-read_noise = 7.07 #RMS of +- spurious electrons
+read_noise = 7.07 #RMS of ± spurious electrons
 dark_current = 4 / u.hour
 n_pix = 4
 
@@ -129,8 +135,9 @@ print("Total SNR", I_SNR/pix*gain / np.sqrt(I_SNR/pix*gain + (gain*read_noise*2.
 
 Q = 0 # "Quality factor" -- summation of intensity/signal over default velocity uncertainty in each bin. Ignores error sources that are considered later.
 for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
+#Teff is rounded to nearest 200 because of limitations in Beatty RVs
 #if b[0] is in wavelength range, and b[1] is in Teff range, use the uncertainty
-	if ((b[0] >= lam_min) and (b[0] <= lam_max) and b[1] == Teff):
+	if ((b[0] >= lam_min) and (b[0] <= lam_max) and b[1] == round(Teff/200)*200):
 		for i in I_0:
 			if i[0] == b[0]:
 				#print(b[0], b[2], 1/np.sqrt(i[4]/b[2]**2))
@@ -158,9 +165,9 @@ v_Teff = 1 + 2.04515*dTeff + 3.13362*dTeff**2 + 4.23845*dTeff**3 #Optical
 
 #theta0 also varies with wavelength choice
 #theta0 is the inherent width of the Voigt profile
-#theta0_opt = 5.10521*(1-0.6395*dTeff) #4000 to 6500 A
-#theta0_red = 3.73956*(1-0.1449*dTeff) #6500 to 10000 A
-#theta0_nir = 6.42622*(1-0.2737*dTeff ) #10000 to 25000 A
+#Θ0_opt = 5.10521*(1-0.6395*dTeff) #4000 to 6500 A
+#Θ0_red = 3.73956*(1-0.1449*dTeff) #6500 to 10000 A
+#Θ0_nir = 6.42622*(1-0.2737*dTeff ) #10000 to 25000 A
 theta_0 = 5.10521*(1-0.6395*dTeff) #optical, 4000 to 6500 A
 
 theta_R = 299792.458/R #c/R in km/s
