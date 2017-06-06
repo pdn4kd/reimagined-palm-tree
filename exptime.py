@@ -44,6 +44,21 @@ dstar = 1.3 * u.pc
 vsini = 2*np.pi*rstar/(38.7*u.day) * u.s/u.km
 theta_rot = 1.13*vsini.si
 
+#atmospheric opacity is, problematic. An innacurate, but better than nothing assumption of optical depth being ~0.11/airmass is used. Airmass amount uses sec(zenith_angle) because this is accurate over the ranges that telescopes actually point.
+zenith_angle = 0 # Can be read in from stellar observations!
+τ = 0.11 # Should vary per wavelength bin.
+scale_height = 8400 * u.m #Can make arguments for `8500 m to ~7500 m, but the higher temperatures typical of the lower atmosphere are more relevant here.
+elevation = 2016 * u.m #ex using Kitt Peak, will need to load from config/simulation.ini
+
+def extinction(λ):
+	# best guess, based on measurements at Texas A&M Univeristy, and CFHT in Mauka Kea
+	# http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
+	# http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
+	# Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
+	return (0.09 + (3080.0/λ)**4)
+
+#opacity = np.exp(-τ/np.cos(zenith_angle)) / np.exp(-elevation/scale_height)
+
 BTSettl = np.genfromtxt(str(round(Teff,-2)), dtype=float)
 #print("Teff:", Teff, " BT-Settl:", round(Teff,-2), " Beatty RV:", round(Teff/200)*200)
 
@@ -64,8 +79,8 @@ for i in np.arange(0, len(model)-1):
 	if((model[i][0] >= λ_min) and (model[i][0] <= λ_max)):
 		power = (model[i][1]*1e-8*u.erg/u.cm**2/u.s/u.angstrom) * ((model[i+1][0]-model[i][0]) * u.angstrom)
 		power *= rstar**2/dstar**2 #rescaling emitted spectrum based on stellar surface area and distance from us
-		#Opacity is treated as universal, but is not. Need to calc per wavelength later.
-		#power *= opacity #rescaling because of atmosphere.
+		opacity = np.exp(elevation/scale_height - extinction(model[i][0])/np.cos(zenith_angle))
+		power *= opacity #rescaling because of atmospheric scattering/absorption.
 		power = power.si
 		photons += (power * model[i][0] * u.angstrom / (c.h * c.c)) * area * efficiency *u.s
 print("photons/s", photons)
