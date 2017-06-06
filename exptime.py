@@ -58,6 +58,8 @@ def extinction(λ):
 	return (0.09 + (3080.0/λ)**4)
 
 #opacity = np.exp(-τ/np.cos(zenith_angle)) / np.exp(-elevation/scale_height)
+airmass = np.exp(-elevation/scale_height)/np.cos(zenith_angle)
+print("airmass (scaled to sea level)", airmass)
 
 BTSettl = np.genfromtxt(str(round(Teff,-2)), dtype=float)
 #print("Teff:", Teff, " BT-Settl:", round(Teff,-2), " Beatty RV:", round(Teff/200)*200)
@@ -79,7 +81,7 @@ for i in np.arange(0, len(model)-1):
 	if((model[i][0] >= λ_min) and (model[i][0] <= λ_max)):
 		power = (model[i][1]*1e-8*u.erg/u.cm**2/u.s/u.angstrom) * ((model[i+1][0]-model[i][0]) * u.angstrom)
 		power *= rstar**2/dstar**2 #rescaling emitted spectrum based on stellar surface area and distance from us
-		opacity = np.exp(elevation/scale_height - extinction(model[i][0])/np.cos(zenith_angle))
+		opacity = np.exp(-extinction(model[i][0]) * airmass)
 		power *= opacity #rescaling because of atmospheric scattering/absorption.
 		power = power.si
 		photons += (power * model[i][0] * u.angstrom / (c.h * c.c)) * area * efficiency *u.s
