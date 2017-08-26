@@ -93,3 +93,7 @@ ENV/
 
 # misc tables
 *00
+
+# graphics
+*.png
+*.pdf

@@ -31,11 +31,12 @@ def extinction(λ):
 	# Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
 	return (0.09 + (3080.0/λ)**4)
 
-def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ):
+def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λmin, λmax, dλ):
 	# Need to fix to make less unit dependent
-	λ_max /= u.angstrom
-	λ_min /= u.angstrom
-	Δλ /= u.angstrom
+	λ_max = λmax.to(u.angstrom).value
+	λ_min = λmin.to(u.angstrom).value
+	Δλ = dλ.to(u.angstrom).value
+	
 	BeattyWaves = np.arange((λ_min+Δλ/2), (λ_max+Δλ/2), Δλ)
 	
 	BTSettl = np.genfromtxt(str(round(Teff,-2)), dtype=float)
@@ -98,7 +99,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 					#print(b[0], b[2], 1/np.sqrt(i[4]/b[2]**2))
 					Q += i[4]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
 	Q = 1/np.sqrt(Q)#Quality factor from summing up weights, ignoring other noise sources
-	print("Noise/Feh/logg-Free V_RMS (km/s):", Q)
+	#print("Noise/Feh/logg-Free V_RMS (km/s):", Q)
 	
 	# Metallicity effects on number of lines and their depth.
 	v_FeH = 10**(-0.27*FeH) # within 15% for near-solar (-2 to 0.5), biggest diff at [Fe/H] = -2
@@ -161,10 +162,10 @@ if __name__ == '__main__':
 	
 	# Currently assuming a spectrometer entirely in the 'optical' range.
 	# Optical is basically Johnson V-band, so m = 0 means 3460 Jy
-	λ_min = 4000 * u.angstrom
-	λ_max = 6500 * u.angstrom
+	λ_min = 3800 * u.angstrom
+	λ_max = 6800 * u.angstrom
 	Δλ = 100 * u.angstrom
-	BeattyWaves = np.arange(4050, 6550, 100) #Optical range wavelength bits
+	BeattyWaves = np.arange(3850, 6850, 100) #Optical range wavelength bits
 	
 	Teff = 5800 #Stellar temp. Non-dummy values will need rounding
 	FeH = 0.0 #solar metallicity, can load from elsewhere
@@ -195,4 +196,31 @@ if __name__ == '__main__':
 	dark_current = 4 / u.hour
 	n_pix = 4 # resolution element total (length x width) pixel count
 
-	print(rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, BeattyWaves))
+	# Alpha Cen B
+	Teff = 5214 # 5214 K
+	logg = 4.37
+	FeH = 0.23
+	rstar = 0.865 * u.solRad
+	dstar = 1.3 * u.pc
+	vsini = 2*np.pi*rstar/(38.7*u.day) * u.s/u.km
+	theta_rot = 1.13*vsini.si
+	# HARPS
+	telescope = 3.566 * u.m
+	#area = np.pi * (telescope/2)**2 # telescope area, central obstruction ignored
+	area = 8.8564 * u.m * u.m
+	efficiency = 0.02 #could be ~1-3%, depending on what is measured
+	λ_min = 3800 * u.angstrom
+	λ_max = 6800 * u.angstrom
+	Δλ = 100 * u.angstrom
+	#BeattyWaves = np.arange((λ_min+Δλ/2)/u.angstrom, (λ_max+Δλ/2)/u.angstrom, Δλ/u.angstrom)
+	R = 110000 #110k or 120k, depending on source
+	gain = 1/1.42 # ADU/e-, assume 1:1 photon to electron generation
+	read_noise = 7.07 #RMS of ± spurious electrons
+	dark_current = 4 / u.hour
+	n_pix = 4
+	well_depth = 30000 #electrons (or photons)
+	read_time = 10 * u.s
+	exptime = 76 * u.s
+
+	print("Radial Velocity test with HARPS on Alpha Cen B. Expected precision 5 cm/s (5e-5 km/s):")
+	print(rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ))
