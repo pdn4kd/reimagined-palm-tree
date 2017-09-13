@@ -167,16 +167,6 @@ if __name__ == '__main__':
 	Δλ = 100 * u.angstrom
 	BeattyWaves = np.arange(3850, 6850, 100) #Optical range wavelength bits
 	
-	Teff = 5800 #Stellar temp. Non-dummy values will need rounding
-	FeH = 0.0 #solar metallicity, can load from elsewhere
-	logg = 4.5 #solar surface gravity, can load from elsewhere
-	vsini = 2.0 #solarish placeholder, will use actual values if possible
-	theta_rot = 1.13*vsini # Rough approximation, but rotational effects are near-linear, no matter limb-darkening.
-	# need stellar diameter/distance (or apparent magnitude in wavelength range)
-	# for correct brightness
-	rstar = 1.0 * u.solRad
-	dstar = 10.0 * u.pc
-	
 	#atmospheric opacity is, uh, problematic. An innacurate, but better than nothing assumption of optical depth being ~0.11/airmass is used.
 	# A better assuption uses a baseline (0.09/airmass), along with rayleigh scattering factor, calibrated to be 1 at 6080 Angstroms. This has some basis in data.
 	# Airmass amount uses sec(zenith_angle) because this is accurate over the ranges that telescopes actually point. (up to 60 degrees off zenith)
@@ -185,30 +175,23 @@ if __name__ == '__main__':
 	#opacity = np.exp(-τ/np.cos(zenith_angle))
 	airmass = np.exp(-site_elevation/8400)/np.cos(zenith_angle)
 	
-	#Telescope and detector
-	exptime = 300 * u.s
-	efficiency = 0.1 # total optical system efficiency, currently includes CCD quantum efficiency
-	telescope = 3.5 * u.m #diameter
-	area = np.pi * (telescope/2)**2
-	R = 100000 #actually varies with wavelength band, but...
-	gain = 1/1.42 # ADU/e-, assume 1:1 photon to electron generation
-	read_noise = 7.07 #RMS of ± spurious electrons
-	dark_current = 4 / u.hour
-	n_pix = 4 # resolution element total (length x width) pixel count
-
 	# Alpha Cen B
-	Teff = 5214 # 5214 K
-	logg = 4.37
-	FeH = 0.23
+	Teff = 5214 # 5214 K. Note that there is rounding to the nearest 100 or 200 K in places.
+	# Sun is 5800 K
+	logg = 4.37 # Surface gravity, sun is 4.5
+	FeH = 0.23 # Metallicity, sun is 0
+	# need stellar diameter/distance (or apparent magnitude in wavelength range)
+	# for correct brightness
 	rstar = 0.865 * u.solRad
 	dstar = 1.3 * u.pc
-	vsini = 2*np.pi*rstar/(38.7*u.day) * u.s/u.km
-	theta_rot = 1.13*vsini.si
-	# HARPS
-	telescope = 3.566 * u.m
+	vsini = 2*np.pi*rstar/(38.7*u.day) * u.s/u.km # Sun is ~2 km/s
+	theta_rot = 1.13*vsini.si # Rough approximation, but rotational effects are near-linear, no matter limb-darkening.
+	
+	# HARPS instrument on ??? telescope (nominally in La Silla)
+	telescope = 3.566 * u.m #diameter
 	#area = np.pi * (telescope/2)**2 # telescope area, central obstruction ignored
 	area = 8.8564 * u.m * u.m
-	efficiency = 0.02 #could be ~1-3%, depending on what is measured
+	efficiency = 0.02 #total optical system efficiency. Could be ~1-3% here, depending on what is measured
 	λ_min = 3800 * u.angstrom
 	λ_max = 6800 * u.angstrom
 	Δλ = 100 * u.angstrom
@@ -217,7 +200,7 @@ if __name__ == '__main__':
 	gain = 1/1.42 # ADU/e-, assume 1:1 photon to electron generation
 	read_noise = 7.07 #RMS of ± spurious electrons
 	dark_current = 4 / u.hour
-	n_pix = 4
+	n_pix = 4 # resolution element total (length x width) pixel count
 	well_depth = 30000 #electrons (or photons)
 	read_time = 10 * u.s
 	exptime = 76 * u.s
