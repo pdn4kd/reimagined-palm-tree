@@ -77,9 +77,9 @@ def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency
 
 def time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ):
 	rv_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ)
-	time_actual = exptime * (sigma_v/rv_actual)**2
-	time_actual += read_time * np.ceil(time_actual/exptime)
-	return time_actual
+	time_actual = exptime * (rv_actual/sigma_v)**2
+	reads = read_time * np.ceil(time_actual/exptime)
+	return time_actual, reads
 
 if __name__ == '__main__':
 	# HARPS
@@ -119,6 +119,6 @@ if __name__ == '__main__':
 	λ_peak = λ_peak(Teff, λ_min, λ_max)
 	#BeattyWaves = np.arange(λ_min/u.angstrom, λ_max/u.angstrom, Δλ/u.angstrom)
 	guess = time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak)
-	actual = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ)
-	print("guess, actual times")
-	print(guess, actual)
+	actual, readout = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ)
+	print("guess, actual exposure, readout(s), total")
+	print(guess, actual, readout, actual+readout)
