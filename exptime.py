@@ -30,6 +30,7 @@ def λ_peak(Teff, λ_min=0 * u.angstrom, λ_max=1e13 * u.angstrom):
 	return λ
 
 def extinction(λ):
+	'''Returns atmospheric extinction coefficient (in magnitudes/airmass), given a wavelength (n Angstroms'''
 	# best guess, based on measurements at Texas A&M Univeristy, and CFHT in Mauka Kea
 	# http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
 	# http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
@@ -37,7 +38,7 @@ def extinction(λ):
 	return (0.09 + (3080.0/λ)**4)
 
 def airmass(zenith_angle, site_elevation=0, scale_height=8400):
-	# number is scaled to sea-level, not site
+	'''Returns the 'airmass' using the sec(z) approximation, and considering reduced atmospheric pressure from being at altitude. Inputs: zenith_angle (radians), site_elevation (meters, default 0), scale_height (default 8400 m)'''
 	return np.exp(-site_elevation/scale_height)/np.cos(zenith_angle)
 
 def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak):
