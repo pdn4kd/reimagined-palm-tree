@@ -29,4 +29,4 @@ A Python 2 compatabile version of rvrms.py (all unicode replaced with ASCII)
 The future of rvrms.py
 
 #### rvrms_batch.py
-Convert observations found in dispatch_scheduler to radial velocities. Currently more proof of concept than anything else.
+Convert observations found in dispatch_scheduler to radial velocities. Currently more proof of concept than anything else. Will integrate into the dispatch_sechduler.

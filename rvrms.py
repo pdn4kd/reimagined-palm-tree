@@ -39,7 +39,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	
 	BeattyWaves = np.arange((λ_min+Δλ/2), (λ_max+Δλ/2), Δλ)
 	
-	BTSettl = np.genfromtxt(str(round(Teff,-2)), dtype=float)
+	BTSettl = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
 	# BT Settl spectra are labled by Teff, and available every 100 K.
 	# These spectra have a wavelength (Angstroms), and a flux (1e8 erg/s/cm^2/Angstrom) column
 	# sum of flux(λ)*Δλ(λ)/1e8 == total flux (in power/area) emitted. 

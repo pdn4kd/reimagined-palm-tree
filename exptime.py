@@ -41,9 +41,9 @@ def airmass(zenith_angle, site_elevation=0, scale_height=8400):
 	'''Returns the 'airmass' using the sec(z) approximation, and considering reduced atmospheric pressure from being at altitude. Inputs: zenith_angle (radians), site_elevation (meters, default 0), scale_height (default 8400 m)'''
 	return np.exp(-site_elevation/scale_height)/np.cos(zenith_angle)
 
-def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak):
+def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak, well_depth):
 	'''Generating an initial guess on exposure time. We assume a saturated detector is appropriate, thus putting one in the photon noise limited regime.'''
-	BTSettl = np.genfromtxt(str(round(Teff,-2)), dtype=float)
+	BTSettl = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
 	#print("Teff:", Teff, " BT-Settl:", round(Teff,-2), " Beatty RV:", round(Teff/200)*200)
 	
 	# BT Settl spectra are labled by Teff, and available every 100 K.
@@ -76,7 +76,7 @@ def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency
 	#print("Estimated exposure time", time_guess, time_guess.si)
 	return time_guess.si
 
-def time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ):
+def time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time):
 	rv_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ)
 	time_actual = exptime * (rv_actual/sigma_v)**2
 	reads = read_time * np.ceil(time_actual/exptime)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 	dark_current = 4 / u.hour
 	n_pix = 4
 	well_depth = 30000 #electrons (or photons)
-	read_time = 10 * u.s
+	read_time = 25 * u.s
 	
 	# Alpha Cen B
 	Teff = 5214 # 5214 K
@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
 	λ_peak = λ_peak(Teff, λ_min, λ_max)
 	#BeattyWaves = np.arange(λ_min/u.angstrom, λ_max/u.angstrom, Δλ/u.angstrom)
-	guess = time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak)
-	actual, readout = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ)
+	guess = time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak, well_depth)
+	actual, readout = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time)
 	print("guess, actual exposure, readout(s), total")
 	print(guess, actual, readout, actual+readout)

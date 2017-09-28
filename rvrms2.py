@@ -12,14 +12,14 @@ Current limitations: Detector properties not closely based on actual hardware, m
 '''
 '''
 starlist = np.genfromtxt("stars.csv", delimiter=",", names=True)
-	τ = 0.11 # Should vary per wavelength bin.
+	tau = 0.11 # Should vary per wavelength bin.
 	for star in starlist:
 	starobs = np.genfromtxt(star['pl_hostname'], delimiter=",", names=True)
 		for obs in starobs:
 			if (obs['altitude'] > 0):
 				# get v_rms for every observation
 				zenith_angle = (90.0-altitude)*np.pi/180
-				opacity = np.exp(-τ/np.cos(zenith_angle))
+				opacity = np.exp(-tau/np.cos(zenith_angle))
 				rvcalc(star['Teff'], star['FeH'], star['logg'], star['vsini'], star['theta_rot'], star['rstar'], star['dstar'], opacity, obs['duration'], star['efficiency'], star['area'], star['R'], star['gain'], star['read_noise'], star['dark_current'], star['n_pix']):
 '''
 
@@ -61,8 +61,8 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 			if ((model[i][0] >= BeattyWaves[lam]) and (model[i][0] < BeattyWaves[lam]+deltalam) and (model[i][0] >= lam_min) and (model[i][0] <= lam_max)):
 				power = (model[i][1]*1e-8*u.erg/u.cm**2/u.s/u.angstrom) * ((model[i+1][0]-model[i][0]) * u.angstrom)
 				power *= rstar**2/dstar**2 #rescaling emitted spectrum based on stellar surface area and distance from us
-				τ = extinction(model[i][0])
-				opacity = np.exp(-τ*airmass)
+				tau = extinction(model[i][0])
+				opacity = np.exp(-tau*airmass)
 				power *= opacity #rescaling because of atmosphere.
 				I_0[lam][1] += power.si * u.m**2/u.watt
 				photons = power * model[i][0] * u.angstrom / (c.h * c.c)
@@ -121,9 +121,9 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	
 	#theta0 also varies with wavelength choice
 	#theta0 is the inherent width of the Voigt profile
-	#Θ0_opt = 5.10521*(1-0.6395*dTeff) #4000 to 6500 A
-	#Θ0_red = 3.73956*(1-0.1449*dTeff) #6500 to 10000 A
-	#Θ0_nir = 6.42622*(1-0.2737*dTeff ) #10000 to 25000 A
+	#theta0_opt = 5.10521*(1-0.6395*dTeff) #4000 to 6500 A
+	#theta0_red = 3.73956*(1-0.1449*dTeff) #6500 to 10000 A
+	#theta0_nir = 6.42622*(1-0.2737*dTeff ) #10000 to 25000 A
 	theta_0 = 5.10521*(1-0.6395*dTeff) #optical, 4000 to 6500 A
 	
 	theta_R = 299792.458/R #c/R in km/s
@@ -171,8 +171,8 @@ if __name__ == '__main__':
 	# A better assuption uses a baseline (0.09/airmass), along with rayleigh scattering factor, calibrated to be 1 at 6080 Angstroms. This has some basis in data.
 	# Airmass amount uses sec(zenith_angle) because this is accurate over the ranges that telescopes actually point. (up to 60 degrees off zenith)
 	zenith_angle = 0 # Can be read in from stellar observations!
-	#τ = 0.11 # Should vary per wavelength bin.
-	#opacity = np.exp(-τ/np.cos(zenith_angle))
+	#tau = 0.11 # Should vary per wavelength bin.
+	#opacity = np.exp(-tau/np.cos(zenith_angle))
 	airmass = np.exp(-site_elevation/8400)/np.cos(zenith_angle)
 	
 	# Alpha Cen B
@@ -198,7 +198,7 @@ if __name__ == '__main__':
 	#BeattyWaves = np.arange((lam_min+deltalam/2)/u.angstrom, (lam_max+deltalam/2)/u.angstrom, deltalam/u.angstrom)
 	R = 110000 #110k or 120k, depending on source
 	gain = 1/1.42 # ADU/e-, assume 1:1 photon to electron generation
-	read_noise = 7.07 #RMS of ± spurious electrons
+	read_noise = 7.07 #RMS of +- spurious electrons
 	dark_current = 4 / u.hour
 	n_pix = 4 # resolution element total (length x width) pixel count
 	well_depth = 30000 #electrons (or photons)
