@@ -128,12 +128,14 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	
 	theta_R = 299792.458/R #c/R in km/s
 	
-	# Macroturbulence error
+	# Macroturbulence error estimate, only really applies for log(g) > 4.0
+	# Teff between 5000 K and 6500 K most accurate, but up to 7600 K okay.
+	# Empirical numbers are better if available.
 	if (Teff > 5000) and (Teff < 7600):
 		v_mac = 1.976 + 16.14*dTeff + 19.713*dTeff**2
-	elif (Teff < 5000):
+	elif (Teff <= 5000): # exactly 5000 K not specified by Beatty, but this is more conservative.
 		v_mac = 0.51
-	theta_mac = np.sqrt(2*np.log(2))*v_mac #Need to get macroturbulence velocity empirically.
+	theta_mac = np.sqrt(2*np.log(2))*v_mac
 	
 	# "Final" value.
 	sigma_v = Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0)**1.5 * v_Teff * v_logg * v_FeH
