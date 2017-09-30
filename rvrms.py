@@ -64,7 +64,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 				τ = extinction(model[i][0])
 				opacity = np.exp(-τ*airmass)
 				power *= opacity #rescaling because of atmosphere.
-				I_0[λ][1] += power.si * u.m**2/u.watt
+				#I_0[λ][1] += power.si * u.m**2/u.watt #only needed for debugging purposes. Slows things by a factor of 5.
 				photons = power * model[i][0] * u.angstrom / (c.h * c.c)
 				I_0[λ][2] += photons * area * efficiency * exptime
 				I_0[λ][0] = BeattyWaves[λ]
