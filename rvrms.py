@@ -10,19 +10,6 @@ Also uses http://www.aanda.org/articles/aa/full/2001/29/aa1316/aa1316.right.html
 
 Current limitations: Detector properties not closely based on actual hardware, microturbulence fixed at ~1 km/s; granulation/starspots/other jitter not considered; fixed assumptions made of Teff (200 K steps) and spectrograph R values made based on wavelength range.
 '''
-'''
-starlist = np.genfromtxt("stars.csv", delimiter=",", names=True)
-	τ = 0.11 # Should vary per wavelength bin.
-	for star in starlist:
-	starobs = np.genfromtxt(star['pl_hostname'], delimiter=",", names=True)
-		for obs in starobs:
-			if (obs['altitude'] > 0):
-				# get v_rms for every observation
-				zenith_angle = (90.0-altitude)*np.pi/180
-				opacity = np.exp(-τ/np.cos(zenith_angle))
-				rvcalc(star['Teff'], star['FeH'], star['logg'], star['vsini'], star['theta_rot'], star['rstar'], star['dstar'], opacity, obs['duration'], star['efficiency'], star['area'], star['R'], star['gain'], star['read_noise'], star['dark_current'], star['n_pix']):
-'''
-
 
 def extinction(λ):
 	# best guess, based on measurements at Texas A&M Univeristy, and CFHT in Mauka Kea
@@ -36,6 +23,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	λ_max = λmax.to(u.angstrom).value
 	λ_min = λmin.to(u.angstrom).value
 	Δλ = dλ.to(u.angstrom).value
+	kstar = rstar**2/dstar**2#rescaling emitted spectrum based on stellar surface area and distance from us
 	
 	BeattyWaves = np.arange((λ_min+Δλ/2), (λ_max+Δλ/2), Δλ)
 	
@@ -48,25 +36,28 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	#
 	# Note that Beatty RV information is only available every 200 K.
 	
-	#De-duping, this is not necessary if spectra are downloaded from another source.
+	#De-duping
 	model = [np.array([0,0])]
 	for x in BTSettl:
 		if np.array_equal(x,model[-1]) == False:
 			model.append(x)
+
+	#preparing
+	for x in np.arange(1, len(model)):
+		model[x][1] *= 1e-8 * kstar
+		τ = extinction(model[x][0])
+		model[x][1] *= np.exp(-τ*airmass) #rescaling because of atmosphere.
+		model[x][1] *= efficiency
 	
 	#I_0 = np.zeros((len(BeattyWaves), 4)) #Wavelength bin, intensity at that velocity/wavelength element in terms of power and photons, overall SNR.
 	I_0 = np.zeros(len(BeattyWaves), dtype=[('wavelength','f4'),('intensity','f8'),('photons','f8'),('SNR','f8'),('real photons','f8')])
 	for λ in np.arange(0, len(BeattyWaves)): #need some C-style array traversal.
 		for i in np.arange(0, len(model)-1):
 			if ((model[i][0] >= BeattyWaves[λ]) and (model[i][0] < BeattyWaves[λ]+Δλ) and (model[i][0] >= λ_min) and (model[i][0] <= λ_max)):
-				power = (model[i][1]*1e-8*u.erg/u.cm**2/u.s/u.angstrom) * ((model[i+1][0]-model[i][0]) * u.angstrom)
-				power *= rstar**2/dstar**2 #rescaling emitted spectrum based on stellar surface area and distance from us
-				τ = extinction(model[i][0])
-				opacity = np.exp(-τ*airmass)
-				power *= opacity #rescaling because of atmosphere.
-				#I_0[λ][1] += power.si * u.m**2/u.watt #only needed for debugging purposes. Slows things by a factor of 5.
+				power = model[i][1] * (model[i+1][0]-model[i][0]) * u.erg/u.cm**2/u.s
+				#I_0[λ][1] += power.si * u.m**2/u.watt#only needed for debugging purposes. Slows things by a factor of 5.
 				photons = power * model[i][0] * u.angstrom / (c.h * c.c)
-				I_0[λ][2] += photons * area * efficiency * exptime
+				I_0[λ][2] += photons * area * exptime
 				I_0[λ][0] = BeattyWaves[λ]
 	
 	
@@ -82,7 +73,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	#print(I_0)
 	#print(sum(I_0[:,1]), "W/m^2")
 	#print(sum(I_0['intensity']), "W/m^2")
-	I_SNR = sum(I_0['photons'])
+	#I_SNR = sum(I_0['photons'])
 	#print("Total SNR", I_SNR/pix*gain / np.sqrt(I_SNR/pix*gain + (gain*read_noise*2.2*2)**2 + (dark_current*exptime)**2), "Average SNR", np.mean(I_0['SNR']))
 	
 	
@@ -107,10 +98,10 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	dTeff = Teff/5800 - 1
 	
 	#log(g), or pressure broadening on linewidth (and velocity precision)
-	#m_opt = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #4500-6500 A
+	#m_opt = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #4000-6500 A
 	#m_red = -0.33507*(1 - 1.41362*dTeff - 4.63727*dTeff**2) #6500-10000 A
 	#m_nir = -0.43926*(1 - 1.12505*dTeff - 4.53938*dTeff**2) #10000-25000 A
-	m = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #optical, 4500-6500 A
+	m = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #optical, 4000-6500 A
 	v_logg = m*(logg-4.5)+1 # #f(log g), m varies with Teff and wavelength. Eqn only good for 4.0 to 5.0
 	
 	#Effective temperature effects on number of lines and their depth.
@@ -141,9 +132,6 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	sigma_v = Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0)**1.5 * v_Teff * v_logg * v_FeH
 	#print("V_RMS", sigma_v)
 	return sigma_v
-
-def expest():
-	'''quick exposure time estimator, given target SNR and detector properties'''
 
 if __name__ == '__main__':
 	'''
