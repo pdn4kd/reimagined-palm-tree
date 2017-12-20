@@ -78,6 +78,9 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	
 	
 	Q = 0 # "Quality factor" -- summation of intensity/signal over default velocity uncertainty in each bin. Ignores error sources that are considered later.
+	Q_opt = 0 #3 different wavelength bands for quality factors because details of the stellar correction factors change over these.
+	Q_red = 0
+	Q_nir = 0
 	# Should this table really be opened in here and not passed from elsewhere/loaded at startup?
 	beatty = np.genfromtxt("table1.dat", dtype=None)
 	beatty.dtype.names = ('Angstrom', 'Teff', 'Uncertaintykms')
@@ -89,6 +92,12 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 				if i[0] == b[0]:
 					#print(b[0], b[2], 1/np.sqrt(i[4]/b[2]**2))
 					Q += i[4]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
+					if b[0] < 6500: #optical range, actually does not go bluewards of 4000 A.
+						Q_opt += i[4]/b[2]**2
+					if ((b[0] > 6500) and (i[0] < 10000.0)): #Red range. Note that Beatty table values are always ..50 A, so no wavelengths will fall in the gap.
+						Q_red += i[4]/b[2]**2
+					if b[0] > 10000: #NIR range, actually does not go redwards of 25000 A.
+						Q_nir += i[4]/b[2]**2
 	Q = 1/np.sqrt(Q)#Quality factor from summing up weights, ignoring other noise sources
 	#print("Noise/Feh/logg-Free V_RMS (km/s):", Q)
 	
@@ -98,28 +107,32 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	dTeff = Teff/5800 - 1
 	
 	#log(g), or pressure broadening on linewidth (and velocity precision)
-	#m_opt = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #4000-6500 A
-	#m_red = -0.33507*(1 - 1.41362*dTeff - 4.63727*dTeff**2) #6500-10000 A
-	#m_nir = -0.43926*(1 - 1.12505*dTeff - 4.53938*dTeff**2) #10000-25000 A
-	m = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #optical, 4000-6500 A
-	v_logg = m*(logg-4.5)+1 # #f(log g), m varies with Teff and wavelength. Eqn only good for 4.0 to 5.0
+	m_opt = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #4000-6500 A
+	v_logg_opt = m_opt*(logg-4.5)+1 
+	m_red = -0.33507*(1 - 1.41362*dTeff - 4.63727*dTeff**2) #6500-10000 A
+	v_logg_red = m_red*(logg-4.5)+1 
+	m_nir = -0.43926*(1 - 1.12505*dTeff - 4.53938*dTeff**2) #10000-25000 A
+	v_logg_nir = m_nir*(logg-4.5)+1 
+	#m = -0.27505*(1 - 1.22211*dTeff - 4.17622*dTeff**2) #optical, 4000-6500 A
+	#v_logg = m*(logg-4.5)+1 #f(log g), m varies with Teff and wavelength. Eqn only good for 4.0 to 5.0
 	
 	#Effective temperature effects on number of lines and their depth.
-	#v_teff_opt = 1 + 2.04515*dTeff + 3.13362*dTeff**2 + 4.23845*dTeff**3
-	#v_teff_red = 1 + 2.18311*dTeff + 4.00361*dTeff**2 + 5.62077*dTeff**3
-	#v_teff_nir = 1 + 1.62418*dTeff + 2.62018*dTeff**2 + 5.01776*dTeff**3
-	v_Teff = 1 + 2.04515*dTeff + 3.13362*dTeff**2 + 4.23845*dTeff**3 #Optical
+	v_Teff_opt = 1 + 2.04515*dTeff + 3.13362*dTeff**2 + 4.23845*dTeff**3
+	v_Teff_red = 1 + 2.18311*dTeff + 4.00361*dTeff**2 + 5.62077*dTeff**3
+	v_Teff_nir = 1 + 1.62418*dTeff + 2.62018*dTeff**2 + 5.01776*dTeff**3
+	#v_Teff = 1 + 2.04515*dTeff + 3.13362*dTeff**2 + 4.23845*dTeff**3 #Optical
 	
 	#theta0 also varies with wavelength choice
 	#theta0 is the inherent width of the Voigt profile
-	#Θ0_opt = 5.10521*(1-0.6395*dTeff) #4000 to 6500 A
-	#Θ0_red = 3.73956*(1-0.1449*dTeff) #6500 to 10000 A
-	#Θ0_nir = 6.42622*(1-0.2737*dTeff ) #10000 to 25000 A
-	theta_0 = 5.10521*(1-0.6395*dTeff) #optical, 4000 to 6500 A
+	theta_0_opt = 5.10521*(1-0.6395*dTeff) #4000 to 6500 A
+	theta_0_red = 3.73956*(1-0.1449*dTeff) #6500 to 10000 A
+	theta_0_nir = 6.42622*(1-0.2737*dTeff ) #10000 to 25000 A
+	#theta_0 = 5.10521*(1-0.6395*dTeff) #optical, 4000 to 6500 A
 	
 	theta_R = 299792.458/R #c/R in km/s
 	
 	# Macroturbulence error estimate, only really applies for log(g) > 4.0
+	# We only care about FGKM main sequence stars (and *maybe* A), so this isn't a problem.
 	# Teff between 5000 K and 6500 K most accurate, but up to 7600 K okay.
 	# Empirical numbers are better if available.
 	if (Teff > 5000) and (Teff < 7600):
@@ -129,8 +142,17 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	theta_mac = np.sqrt(2*np.log(2))*v_mac
 	
 	# "Final" value.
-	sigma_v = Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0)**1.5 * v_Teff * v_logg * v_FeH
+	#sigma_v = Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0)**1.5 * v_Teff * v_logg * v_FeH
 	#print("V_RMS", sigma_v)
+
+	# Weighted sum weirdness is because Teff, logg, etc effects vary with wavelength band!
+	sigma_opt = ((0.5346*theta_0_opt + np.sqrt(0.2166*theta_0_opt**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0_opt)**1.5 * v_Teff_opt * v_logg_opt * v_FeH
+	sigma_red = ((0.5346*theta_0_red + np.sqrt(0.2166*theta_0_red**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0_red)**1.5 * v_Teff_red * v_logg_red * v_FeH
+	sigma_nir = ((0.5346*theta_0_nir + np.sqrt(0.2166*theta_0_nir**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0_nir)**1.5 * v_Teff_nir * v_logg_nir * v_FeH
+	sigma = 1/np.sqrt(Q_opt/sigma_opt**2 + Q_red/sigma_red**2 + Q_nir/sigma_nir**2)
+	sigma_v = sigma
+	#print(sigma)
+	#print(1/np.sqrt(Q_opt/sigma_opt**2), 1/np.sqrt(Q_red/sigma_red**2), 1/np.sqrt(Q_nir/sigma_nir**2))
 	return sigma_v
 
 if __name__ == '__main__':
