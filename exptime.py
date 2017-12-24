@@ -5,9 +5,9 @@ from astropy import constants as c
 import rvrms
 
 '''
-Exposure time calculator for a list of target stars, desired measurement quality, and optical system specifications. Currently a proof of concept derived from HARPS, but capable to some degree of considering stellar properties.
+Exposure time calculator for a list of target stars, desired measurement quality, and optical system specifications. Currently a proof of concept derived from HARPS, but capable to some degree of considering stellar properties. Note: output is in seconds!
 
-Makes simplifications, and is currently only valid in optical (-), but can be expanded to red (-) and near IR (-).
+Makes simplifications, and but should be valid in optical (400-650 nm), red (650-1000 nm) and near IR (1000-2500 nm).
 
 Guesses at exposure time based on saturating the detector, then scales with t^-0.5 to get the precision. Also considers readout time.
 '''
