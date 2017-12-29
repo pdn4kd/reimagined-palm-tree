@@ -27,7 +27,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	
 	BeattyWaves = np.arange((λ_min+Δλ/2), (λ_max+Δλ/2), Δλ)
 	
-	BTSettl = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
+	#BTSettl = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
 	# BT Settl spectra are labled by Teff, and available every 100 K.
 	# These spectra have a wavelength (Angstroms), and a flux (1e8 erg/s/cm^2/Angstrom) column
 	# sum of flux(λ)*Δλ(λ)/1e8 == total flux (in power/area) emitted. 
@@ -36,18 +36,14 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	#
 	# Note that Beatty RV information is only available every 200 K.
 	
-	#De-duping
-	model = [np.array([0,0])]
-	for x in BTSettl:
-		if np.array_equal(x,model[-1]) == False:
-			model.append(x)
-
+	model = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
 	#preparing
-	for x in np.arange(1, len(model)):
-		model[x][1] *= 1e-8 * kstar
+	for x in np.arange(0, len(model)):
+		model[x][1] *= kstar
 		τ = extinction(model[x][0])
 		model[x][1] *= np.exp(-τ*airmass) #rescaling because of atmosphere.
 		model[x][1] *= efficiency
+	
 	
 	#I_0 = np.zeros((len(BeattyWaves), 4)) #Wavelength bin, intensity at that velocity/wavelength element in terms of power and photons, overall SNR.
 	I_0 = np.zeros(len(BeattyWaves), dtype=[('wavelength','f4'),('intensity','f8'),('photons','f8'),('SNR','f8'),('real photons','f8')])
