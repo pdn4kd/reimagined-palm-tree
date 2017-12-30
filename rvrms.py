@@ -73,11 +73,12 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	#print("Total SNR", I_SNR/pix*gain / np.sqrt(I_SNR/pix*gain + (gain*read_noise*2.2*2)**2 + (dark_current*exptime)**2), "Average SNR", np.mean(I_0['SNR']))
 	
 	
-	Q = 0 # "Quality factor" -- summation of intensity/signal over default velocity uncertainty in each bin. Ignores error sources that are considered later.
+	# "Q is the Quality factor" -- summation of intensity/signal over default velocity uncertainty in each bin. Ignores error sources that are considered later.
 	Q_opt = 0 #3 different wavelength bands for quality factors because details of the stellar correction factors change over these.
 	Q_red = 0
 	Q_nir = 0
 	# Should this table really be opened in here and not passed from elsewhere/loaded at startup?
+	#More importantly, should it be broken out by temperature, so only the important parts are used?
 	beatty = np.genfromtxt("table1.dat", dtype=None)
 	beatty.dtype.names = ('Angstrom', 'Teff', 'Uncertaintykms')
 	for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
@@ -87,15 +88,13 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 			for i in I_0:
 				if i[0] == b[0]:
 					#print(b[0], b[2], 1/np.sqrt(i[4]/b[2]**2))
-					Q += i[4]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
+					# Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
 					if b[0] < 6500: #optical range, actually does not go bluewards of 4000 A.
 						Q_opt += i[4]/b[2]**2
 					if ((b[0] > 6500) and (i[0] < 10000.0)): #Red range. Note that Beatty table values are always ..50 A, so no wavelengths will fall in the gap.
 						Q_red += i[4]/b[2]**2
 					if b[0] > 10000: #NIR range, actually does not go redwards of 25000 A.
 						Q_nir += i[4]/b[2]**2
-	Q = 1/np.sqrt(Q)#Quality factor from summing up weights, ignoring other noise sources
-	#print("Noise/Feh/logg-Free V_RMS (km/s):", Q)
 	
 	# Metallicity effects on number of lines and their depth.
 	v_FeH = 10**(-0.27*FeH) # within 15% for near-solar (-2 to 0.5), biggest diff at [Fe/H] = -2
@@ -138,9 +137,6 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	theta_mac = np.sqrt(2*np.log(2))*v_mac
 	
 	# "Final" value.
-	#sigma_v = Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0)**1.5 * v_Teff * v_logg * v_FeH
-	#print("V_RMS", sigma_v)
-
 	# Weighted sum weirdness is because Teff, logg, etc effects vary with wavelength band!
 	sigma_opt = ((0.5346*theta_0_opt + np.sqrt(0.2166*theta_0_opt**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0_opt)**1.5 * v_Teff_opt * v_logg_opt * v_FeH
 	sigma_red = ((0.5346*theta_0_red + np.sqrt(0.2166*theta_0_red**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0_red)**1.5 * v_Teff_red * v_logg_red * v_FeH
