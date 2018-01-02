@@ -22,11 +22,11 @@ Simple example of calculating exposure times across a range of magnitudes. Demon
 ##### rvrms.py
 Calculates SNR and RV precision, given telescope and stellar parameters. Radial Velocity uncertainty based off of signal in a somewhat idealized spectrograph, and stellar type. Stellar spectra are BT-Settl, if in a somewhat non-standard format. Other equations and data (http://www.personal.psu.edu/tgb15/beattygaudi/table1.dat) from Beatty and Gaudi (2015). DOI: 10.1086/684264
 
-Example spectra are included (named 1700-9800). Also uses http://www.aanda.org/articles/aa/full/2001/29/aa1316/aa1316.right.html for reference.
+Example spectra are included (named 1700-9800, every 100 K below 7000 K and every 200 K above). Also uses http://www.aanda.org/articles/aa/full/2001/29/aa1316/aa1316.right.html for reference.
 
-Current limitations: Detector properties not that closely based on actual hardware (especially sensitivity vs wavelength), macroturbulence assumed based on effective temperature instead of observations, microturbulence fixed at ~1 km/s; granulation/starspots/other jitter not considered; fixed assumptions made of Teff (200 K steps) and spectrograph R values made based on wavelength range.
+Current limitations: Detector properties not that closely based on actual hardware (especially sensitivity vs wavelength), macroturbulence assumed based on effective temperature instead of observations, microturbulence fixed at ~1 km/s; granulation/starspots/other jitter not considered; fixed assumptions made of Teff (200 K steps for RV information, must be between 2600 K and 7600 K inclusive, Stellar spectra in 100 K steps); wavelength ranges (400-2500 nm); spectrograph R values made based on wavelength range.
 
 The spectrograph issues bother pdn4kd greatly, and a way to not have to use the table (with its assumptions on R and wavelength ranges) would be greatly appreciated.
 
 #### rvrms_batch.py
-Convert observations found in dispatch_scheduler to radial velocities. Currently more proof of concept than anything else. Will require the dispatch_scheduler, as it will be primarily used to generate radial velocities from observations done in it.
+Convert observations found in dispatch_scheduler to radial velocities. Needs additional work due to fragility/assumptions. Requires the dispatch_scheduler repo, and it is primarily used to generate radial velocities from observations done there.
