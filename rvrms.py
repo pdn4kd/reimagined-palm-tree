@@ -12,10 +12,12 @@ Current limitations: Detector properties not closely based on actual hardware, m
 '''
 
 def extinction(λ):
-	# best guess, based on measurements at Texas A&M Univeristy, and CFHT in Mauka Kea
-	# http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
-	# http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
-	# Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
+	'''
+	Takes input wavelength (assumed to be ångströms, but without astropy.units or the like), outputs an optical depth. This is an empirical best guess of extinction (primarily Rayleigh scattering), based on measurements at Texas A&M Univeristy, and CFHT in Mauka Kea.
+	http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
+	http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
+	Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
+	'''
 	return (0.09 + (3080.0/λ)**4)
 
 def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λmin, λmax, dλ):
@@ -30,7 +32,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	#BTSettl = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
 	# BT Settl spectra are labled by Teff, and available every 100 K.
 	# These spectra have a wavelength (Angstroms), and a flux (1e8 erg/s/cm^2/Angstrom) column
-	# sum of flux(λ)*Δλ(λ)/1e8 == total flux (in power/area) emitted. 
+	# sum of flux(λ)*Δλ(λ) == total flux (in power/area) emitted. 
 	# Multiply bt stellar_radius^2/distance^2 for recieved.
 	# Spectra downloaded from other sources will use different units!
 	#
@@ -58,7 +60,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	
 	
 	# A resolution element is not 100 A long!
-	# R = l/dl, so 1 resolution element at wavelength lambda is lambda/R wide
+	# R = λ/Δλ, so 1 resolution element at wavelength lambda is lambda/R wide
 	# Or, a bin contains 100 A/(lambda/R) = 100A*R/lambda resolution elements
 	for λ in np.arange(0, len(BeattyWaves)):
 		pix = n_pix*Δλ*R/I_0[λ][0]
@@ -148,13 +150,6 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	return sigma_v
 
 if __name__ == '__main__':
-	'''
-	starlist = np.genfromtxt("stars.csv", delimiter=",", names=True)
-		for star in starlist:
-		starobs = np.genfromtxt(star['pl_hostname'], delimiter=",", names=True)
-			for obs in starobs:
-		# get v_rms for every observation
-	'''
 	site_elevation = 2016.0 # m
 
 	# Beatty spectra (simulated): 100 A chunks; Solar metallicity;
