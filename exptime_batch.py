@@ -37,7 +37,7 @@ for star in starlist:
     read_time = sim.instruments[0].read_time * u.s
     guess = exptime.time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_peak, sim.instruments[0].well_depth)
     actual, readout = exptime.time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, guess, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, read_time)
-    line = '0'+'\t'+str(star['Name'])[2:-1]+'\t'+str(star['hms'])[2:-1]+' '+str(star['dms'])[2:-1]+'\t'+str(star['mag'])+"\tDQZ\t"+str((actual+readout).to(u.minute).value)+'\t'+str(actual.to(u.minute))+'\n'
+    line = '0'+'\t'+str(star['Name'])[2:-1]+'\t'+str(star['hms'])[2:-1]+' '+str(star['dms'])[2:-1]+'\t'+str(star['mag'])+"\tDQZ\t"+str((actual+readout).to(u.minute).value)+'\t'+str(actual.to(u.minute).value)+'\n'
     print(line)
     eta_list.write(line)
     #print("guess, actual exposure, readout(s), total")
