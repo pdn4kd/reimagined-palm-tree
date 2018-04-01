@@ -5,6 +5,7 @@ Calculating all exposure times given a stellar input list. Requires a "targetsta
 import numpy as np
 import exptime
 from astropy import units as u
+from astropy import coordinates as coord
 import simulation
 import datetime
 now = str((datetime.datetime.now()).isoformat())
@@ -37,7 +38,16 @@ for star in starlist:
     read_time = sim.instruments[0].read_time * u.s
     guess = exptime.time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_peak, sim.instruments[0].well_depth)
     actual, readout = exptime.time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, guess, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, read_time)
-    line = '0'+'\t'+str(star['Name'])[2:-1]+'\t'+str(star['hms'])[2:-1]+' '+str(star['dms'])[2:-1]+'\t'+str(star['mag'])+"\tDQZ\t"+str((actual+readout).to(u.minute).value)+'\t'+str(actual.to(u.minute).value)+'\n'
+    # We don't know if we're getting decimal degrees or sexigesimal formatted coordinates
+    try:
+        RADEC = str(star['hms'])[2:-1]+' '+str(star['dms'])[2:-1]
+    except ValueError:
+        coords = coord.SkyCoord(ra=star['_RAJ2000']*u.degree, dec=star['_DEJ2000']*u.degree)
+        RADEC = coords.to_string('hmsdms')
+    MK = str(star['MK'])[2:-1]
+    if MK == "":
+        MK = "XXX"
+    line = '0'+'\t'+str(star['Name'])[2:-1]+'\t'+RADEC+'\t'+str(star['mag'])+"\t"+MK+"\t"+str((actual+readout).to(u.minute).value)+'\t'+str(actual.to(u.minute).value)+'\n'
     print(line)
     eta_list.write(line)
     #print("guess, actual exposure, readout(s), total")
