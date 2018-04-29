@@ -12,15 +12,13 @@ Current limitations: Detector properties not closely based on actual hardware, m
 '''
 
 def extinction(λ):
-	'''
-	Takes input wavelength (assumed to be ångströms, but without astropy.units or the like), outputs an optical depth. This is an empirical best guess of extinction (primarily Rayleigh scattering), based on measurements at Texas A&M Univeristy, and CFHT in Mauka Kea.
-	http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
-	http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
-	Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
-	'''
+	# best guess, based on measurements at Texas A&M Univeristy, and CFHT in Mauka Kea
+	# http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
+	# http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
+	# Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
 	return (0.09 + (3080.0/λ)**4)
 
-def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λmin, λmax, dλ):
+def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λmin, λmax, dλ):
 	# Need to fix to make less unit dependent
 	λ_max = λmax.to(u.angstrom).value
 	λ_min = λmin.to(u.angstrom).value
@@ -32,7 +30,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	#BTSettl = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
 	# BT Settl spectra are labled by Teff, and available every 100 K.
 	# These spectra have a wavelength (Angstroms), and a flux (1e8 erg/s/cm^2/Angstrom) column
-	# sum of flux(λ)*Δλ(λ) == total flux (in power/area) emitted. 
+	# sum of flux(λ)*Δλ(λ)/1e8 == total flux (in power/area) emitted. 
 	# Multiply bt stellar_radius^2/distance^2 for recieved.
 	# Spectra downloaded from other sources will use different units!
 	#
@@ -60,7 +58,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	
 	
 	# A resolution element is not 100 A long!
-	# R = λ/Δλ, so 1 resolution element at wavelength lambda is lambda/R wide
+	# R = l/dl, so 1 resolution element at wavelength lambda is lambda/R wide
 	# Or, a bin contains 100 A/(lambda/R) = 100A*R/lambda resolution elements
 	for λ in np.arange(0, len(BeattyWaves)):
 		pix = n_pix*Δλ*R/I_0[λ][0]
@@ -75,12 +73,11 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	#print("Total SNR", I_SNR/pix*gain / np.sqrt(I_SNR/pix*gain + (gain*read_noise*2.2*2)**2 + (dark_current*exptime)**2), "Average SNR", np.mean(I_0['SNR']))
 	
 	
-	# "Q is the Quality factor" -- summation of intensity/signal over default velocity uncertainty in each bin. Ignores error sources that are considered later.
+	Q = 0 # "Quality factor" -- summation of intensity/signal over default velocity uncertainty in each bin. Ignores error sources that are considered later.
 	Q_opt = 0 #3 different wavelength bands for quality factors because details of the stellar correction factors change over these.
 	Q_red = 0
 	Q_nir = 0
 	# Should this table really be opened in here and not passed from elsewhere/loaded at startup?
-	#More importantly, should it be broken out by temperature, so only the important parts are used?
 	beatty = np.genfromtxt("table1.dat", dtype=None)
 	beatty.dtype.names = ('Angstrom', 'Teff', 'Uncertaintykms')
 	for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
@@ -90,13 +87,15 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 			for i in I_0:
 				if i[0] == b[0]:
 					#print(b[0], b[2], 1/np.sqrt(i[4]/b[2]**2))
-					# Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
+					Q += i[4]/b[2]**2 # Summation to get RMS velocity error over the wavelength range, given that it is known in each bin.
 					if b[0] < 6500: #optical range, actually does not go bluewards of 4000 A.
 						Q_opt += i[4]/b[2]**2
 					if ((b[0] > 6500) and (i[0] < 10000.0)): #Red range. Note that Beatty table values are always ..50 A, so no wavelengths will fall in the gap.
 						Q_red += i[4]/b[2]**2
 					if b[0] > 10000: #NIR range, actually does not go redwards of 25000 A.
 						Q_nir += i[4]/b[2]**2
+	Q = 1/np.sqrt(Q)#Quality factor from summing up weights, ignoring other noise sources
+	#print("Noise/Feh/logg-Free V_RMS (km/s):", Q)
 	
 	# Metallicity effects on number of lines and their depth.
 	v_FeH = 10**(-0.27*FeH) # within 15% for near-solar (-2 to 0.5), biggest diff at [Fe/H] = -2
@@ -132,13 +131,18 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	# We only care about FGKM main sequence stars (and *maybe* A), so this isn't a problem.
 	# Teff between 5000 K and 6500 K most accurate, but up to 7600 K okay.
 	# Empirical numbers are better if available.
-	if (Teff > 5000) and (Teff < 7600):
-		v_mac = 1.976 + 16.14*dTeff + 19.713*dTeff**2
-	elif (Teff <= 5000): # exactly 5000 K not specified by Beatty, but this is more conservative.
-		v_mac = 0.51
+	if (v_mac == "") or (v_mac == "nan") or (v_mac < 0.0) or np.isnan(v_mac):
+		if (Teff > 5000) and (Teff < 7600):
+			v_mac = 1.976 + 16.14*dTeff + 19.713*dTeff**2
+		elif (Teff <= 5000): # exactly 5000 K not specified by Beatty, but this is more conservative.
+			v_mac = 0.51
 	theta_mac = np.sqrt(2*np.log(2))*v_mac
+	print(v_mac, theta_mac)
 	
 	# "Final" value.
+	#sigma_v = Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0)**1.5 * v_Teff * v_logg * v_FeH
+	#print("V_RMS", sigma_v)
+
 	# Weighted sum weirdness is because Teff, logg, etc effects vary with wavelength band!
 	sigma_opt = ((0.5346*theta_0_opt + np.sqrt(0.2166*theta_0_opt**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0_opt)**1.5 * v_Teff_opt * v_logg_opt * v_FeH
 	sigma_red = ((0.5346*theta_0_red + np.sqrt(0.2166*theta_0_red**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0_red)**1.5 * v_Teff_red * v_logg_red * v_FeH
@@ -150,6 +154,13 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, ef
 	return sigma_v
 
 if __name__ == '__main__':
+	'''
+	starlist = np.genfromtxt("stars.csv", delimiter=",", names=True)
+		for star in starlist:
+		starobs = np.genfromtxt(star['pl_hostname'], delimiter=",", names=True)
+			for obs in starobs:
+		# get v_rms for every observation
+	'''
 	site_elevation = 2016.0 # m
 
 	# Beatty spectra (simulated): 100 A chunks; Solar metallicity;
@@ -185,6 +196,7 @@ if __name__ == '__main__':
 	dstar = 1.3 * u.pc
 	vsini = 2*np.pi*rstar/(38.7*u.day) * u.s/u.km # Sun is ~2 km/s
 	theta_rot = 1.13*vsini.si # Rough approximation, but rotational effects are near-linear, no matter limb-darkening.
+	vmac = float('nan') #actual value uncertain in my sources.
 	
 	# HARPS instrument on ??? telescope (nominally in La Silla)
 	telescope = 3.566 * u.m #diameter
@@ -205,4 +217,4 @@ if __name__ == '__main__':
 	exptime = 76 * u.s
 
 	print("Radial Velocity test with HARPS on Alpha Cen B. Expected precision 5 cm/s (5e-5 km/s):")
-	print(rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ))
+	print(rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ))
