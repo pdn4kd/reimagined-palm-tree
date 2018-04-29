@@ -137,7 +137,6 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 		elif (Teff <= 5000): # exactly 5000 K not specified by Beatty, but this is more conservative.
 			v_mac = 0.51
 	theta_mac = np.sqrt(2*np.log(2))*v_mac
-	print(v_mac, theta_mac)
 	
 	# "Final" value.
 	#sigma_v = Q * ((0.5346*theta_0 + np.sqrt(0.2166*theta_0**2+theta_R**2+0.518*theta_rot**2+theta_mac**2))/theta_0)**1.5 * v_Teff * v_logg * v_FeH
