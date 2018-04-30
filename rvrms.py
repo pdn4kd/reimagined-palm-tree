@@ -29,8 +29,8 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 	
 	#BTSettl = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
 	# BT Settl spectra are labled by Teff, and available every 100 K.
-	# These spectra have a wavelength (Angstroms), and a flux (1e8 erg/s/cm^2/Angstrom) column
-	# sum of flux(λ)*Δλ(λ)/1e8 == total flux (in power/area) emitted. 
+	# These spectra have a wavelength (Angstroms), and a flux (1 erg/s/cm^2/Angstrom) column
+	# sum of flux(λ)*Δλ(λ) == total flux (in power/area) emitted. 
 	# Multiply bt stellar_radius^2/distance^2 for recieved.
 	# Spectra downloaded from other sources will use different units!
 	#
@@ -47,15 +47,16 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 	
 	#I_0 = np.zeros((len(BeattyWaves), 4)) #Wavelength bin, intensity at that velocity/wavelength element in terms of power and photons, overall SNR.
 	I_0 = np.zeros(len(BeattyWaves), dtype=[('wavelength','f4'),('intensity','f8'),('photons','f8'),('SNR','f8'),('real photons','f8')])
-	for λ in np.arange(0, len(BeattyWaves)): #need some C-style array traversal.
-		for i in np.arange(0, len(model)-1):
-			if ((model[i][0] >= BeattyWaves[λ]) and (model[i][0] < BeattyWaves[λ]+Δλ) and (model[i][0] >= λ_min) and (model[i][0] <= λ_max)):
-				power = model[i][1] * (model[i+1][0]-model[i][0]) * u.erg/u.cm**2/u.s
-				#I_0[λ][1] += power.si * u.m**2/u.watt#only needed for debugging purposes. Slows things by a factor of 5.
-				photons = power * model[i][0] * u.angstrom / (c.h * c.c)
-				I_0[λ][2] += photons * area * exptime
-				I_0[λ][0] = BeattyWaves[λ]
-	
+	for i in np.arange(0, len(model)-1):
+		if ((model[i][0] >= λ_min) and (model[i][0] <= λ_max) and model[i][0] >= BeattyWaves[0] and model[i][0] < BeattyWaves[-1]+Δλ):
+			power = model[i][1] * (model[i+1][0]-model[i][0]) * u.erg/u.cm**2/u.s
+			photons = power * model[i][0] * u.angstrom / (c.h * c.c)
+			λ = int(np.floor((model[i][0] - λ_min)/Δλ-0.5))
+			I_0[λ][2] += photons * area * exptime
+
+	for i in np.arange(0, len(BeattyWaves-1)):
+		I_0[i][0] = BeattyWaves[i]
+
 	
 	# A resolution element is not 100 A long!
 	# R = l/dl, so 1 resolution element at wavelength lambda is lambda/R wide
