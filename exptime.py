@@ -41,7 +41,7 @@ def airmass(zenith_angle, site_elevation=0, scale_height=8400):
 	'''Returns the 'airmass' using the sec(z) approximation, and considering reduced atmospheric pressure from being at altitude. Inputs: zenith_angle (radians), site_elevation (meters, default 0), scale_height (default 8400 m)'''
 	return np.exp(-site_elevation/scale_height)/np.cos(zenith_angle)
 
-def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak, well_depth):
+def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak, well_depth):
 	'''Generating an initial guess on exposure time. We assume a saturated detector is appropriate, thus putting one in the photon noise limited regime.'''
 	BTSettl = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
 	#print("Teff:", Teff, " BT-Settl:", round(Teff,-2), " Beatty RV:", round(Teff/200)*200)
@@ -76,8 +76,8 @@ def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency
 	#print("Estimated exposure time", time_guess, time_guess.si)
 	return time_guess.si
 
-def time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time):
-	rv_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ)
+def time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time):
+	rv_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ)
 	time_actual = exptime * (rv_actual/sigma_v)**2
 	reads = read_time * np.ceil(time_actual/exptime)
 	return time_actual, reads
@@ -108,6 +108,7 @@ if __name__ == '__main__':
 	dstar = 1.3 * u.pc
 	vsini = 2*np.pi*rstar/(38.7*u.day) * u.s/u.km
 	theta_rot = 1.13*vsini.si
+	v_mac = 2.0 # km/s, best guess
 	
 	sigma_v = 5e-5 # target single measurement photon noise precision in km/s
 	

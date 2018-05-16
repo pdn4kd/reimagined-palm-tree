@@ -1,5 +1,7 @@
 '''
 Calculating all exposure times given a stellar input list. Requires a "targetstars.csv" in the same folder, which it uses for Teff, Fe/H, log(g), v*sin(i), distance, and stellar radius. Instrumental parameters are taken from config/instrument.ini. Output is eta_list.txt, which is formatted to be useable by the dispatch scheduler (move to secret/).
+
+This is a somewhat ad-hoc script, and you absolutely should edit it if you find other choices of headings clearer. Likewise sigma_v for differing precisions.
 '''
 
 import numpy as np
@@ -14,13 +16,13 @@ sim = simulation.simulation('simulation.ini')
 Δλ = 100 * u.angstrom
 λ_max = sim.instruments[0].λmax * u.angstrom
 λ_min = sim.instruments[0].λmin * u.angstrom
-sigma_v = 1e-5 # km/s
+sigma_v = 3e-5 # km/s
 zenith_angle = 10*np.pi/180 #obviously should be set based on typical object altitude
 atmo = exptime.airmass(zenith_angle,sim.elevation,8400)
 area = sim.telescopes[0].area * u.m * u.m
 
 starlist = np.genfromtxt("targetstars.csv", delimiter=",", dtype=None, names=True)
-eta_list = open("eta_list.txt", 'w')
+eta_list = open("eta_lbt_ilocator_3cms.txt", 'w')
 eta_list.write("Automatically generated list by exptime_batch.py on "+now+"\n\n")
 eta_list.write(" IdentList\n----------\n\n")
 eta_list.write(" # \ttyped ident\t  coord1 (ICRS,J2000/2000)     \tMag V\t      spec type  \tExp Time\n")
@@ -34,17 +36,18 @@ for star in starlist:
     theta_rot = 1.13 * star['kms']
     rstar = star['solRad'] * u.solRad
     dstar = star['pc'] * u.pc
+    vmac = star['Vmac']
     dark_current = sim.instruments[0].dark_current / u.hour
     read_time = sim.instruments[0].read_time * u.s
-    guess = exptime.time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_peak, sim.instruments[0].well_depth)
-    actual, readout = exptime.time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, guess, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, read_time)
+    guess = exptime.time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_peak, sim.instruments[0].well_depth)
+    actual, readout = exptime.time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, guess, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, read_time)
     # We don't know if we're getting decimal degrees or sexigesimal formatted coordinates
     try:
         RADEC = str(star['hms'])[2:-1]+' '+str(star['dms'])[2:-1]
     except ValueError:
         coords = coord.SkyCoord(ra=star['_RAJ2000']*u.degree, dec=star['_DEJ2000']*u.degree)
         RADEC = coords.to_string('hmsdms')
-    MK = str(star['MK'])[2:-1]
+    MK = str(star['MK'])[2:-1] #Spectra type is nice to have
     if MK == "":
         MK = "XXX"
     line = '0'+'\t'+str(star['Name'])[2:-1]+'\t'+RADEC+'\t'+str(star['mag'])+"\t"+MK+"\t"+str((actual+readout).to(u.minute).value)+'\t'+str(actual.to(u.minute).value)+'\n'
