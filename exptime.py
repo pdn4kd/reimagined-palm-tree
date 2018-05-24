@@ -19,7 +19,6 @@ Guesses at exposure time based on saturating the detector, then scales with t^-0
 beatty = np.genfromtxt("table1.dat", dtype=None)
 beatty.dtype.names = ('Angstrom', 'Teff', 'Uncertaintykms')
 
-
 def λ_peak(Teff, λ_min=0 * u.angstrom, λ_max=1e13 * u.angstrom):
 	λ = (c.b_wien / (Teff * u.K)).si # Star is assumed to be a perfect blackbody
 	# Correcting for if peak wavelength is outside of detector, angstroms assumed
@@ -35,6 +34,7 @@ def extinction(λ):
 	# http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
 	# http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
 	# Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
+	# Rayleigh scattering, and a general scattering absorption are considered, but the Water vapor, etc lines in the IR are not!
 	return (0.09 + (3080.0/λ)**4)
 
 def airmass(zenith_angle, site_elevation=0, scale_height=8400):
@@ -47,28 +47,22 @@ def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, eff
 	#print("Teff:", Teff, " BT-Settl:", round(Teff,-2), " Beatty RV:", round(Teff/200)*200)
 	
 	# BT Settl spectra are labled by Teff, and available every 100 K.
-	# These spectra have a wavelength (Angstroms), and a flux (1e8 erg/s/cm^2/Angstrom) column
+	# These spectra have a wavelength (Angstroms), and a flux (1 erg/s/cm^2/Angstrom) column
 	# sum of flux(λ)*Δλ(λ)/1e8 == total flux (in power/area) emitted. 
 	# Multiply bt stellar_radius^2/distance^2 for recieved.
 	# Spectra downloaded from other sources will use different units!
-	
-	#De-duping, this is not necessary if spectra are downloaded from another source.
-	model = [np.array([0,0])]
-	for x in BTSettl:
-		if np.array_equal(x,model[-1]) == False:
-			model.append(x)
 	photons = 0
 	#Counting up photons for SNR -> exposure time calc
 	
 	#adding up photons in 100 A chunk centered on peak wavelength:
-	for i in np.arange(0, len(model)-1):
-		if((model[i][0]>= λ_peak/u.angstrom-50) and (model[i][0] <= λ_peak/u.angstrom+15)):
-			power = (model[i][1]*1e-8*u.erg/u.cm**2/u.s/u.angstrom) * ((model[i+1][0]-model[i][0]) * u.angstrom)
+	for i in np.arange(0, len(BTSettl)-1):
+		if((BTSettl[i][0]>= λ_peak/u.angstrom-50) and (BTSettl[i][0] <= λ_peak/u.angstrom+15)):
+			power = (BTSettl[i][1]*u.erg/u.cm**2/u.s/u.angstrom) * ((BTSettl[i+1][0]-BTSettl[i][0]) * u.angstrom)
 			power *= rstar**2/dstar**2 #rescaling emitted spectrum based on stellar surface area and distance from us
-			opacity = np.exp(-extinction(model[i][0]) * atmo)
+			opacity = np.exp(-extinction(BTSettl[i][0]) * atmo)
 			power *= opacity #rescaling because of atmospheric scattering/absorption.
 			power = power.si
-			photons += (power * model[i][0] * u.angstrom / (c.h * c.c)) * area * efficiency
+			photons += (power * BTSettl[i][0] * u.angstrom / (c.h * c.c)) * area * efficiency
 	photons /= (100*u.angstrom / (λ_peak/R)) #100 Angstrom range -> per resolution element
 	photons /= n_pix #per resolution element -> per pixel
 	#print("photons/s/pixel", photons)
@@ -79,11 +73,13 @@ def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, eff
 def time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time):
 	rv_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ)
 	time_actual = exptime * (rv_actual/sigma_v)**2
-	reads = read_time * np.ceil(time_actual/exptime)
-	return time_actual, reads
+	number_exposures = np.ceil(time_actual/exptime)
+	time_exposure = time_actual/number_exposures
+	reads = read_time * number_exposures
+	return time_actual, reads, time_exposure, number_exposures
 
 if __name__ == '__main__':
-	# HARPS
+	# HARPS / ESO 3.6 m at La Silla
 	telescope = 3.566 * u.m
 	#area = np.pi * (telescope/2)**2 # telescope area, central obstruction ignored
 	area = 8.8564 * u.m * u.m
@@ -108,19 +104,20 @@ if __name__ == '__main__':
 	dstar = 1.3 * u.pc
 	vsini = 2*np.pi*rstar/(38.7*u.day) * u.s/u.km
 	theta_rot = 1.13*vsini.si
-	v_mac = 2.0 # km/s, best guess
+	v_mac = np.float('nan') # km/s, but exact value unclear
 	
 	sigma_v = 5e-5 # target single measurement photon noise precision in km/s
 	
 	# Atmo
 	zenith_angle = 0 # Can be read in from stellar observations!
 	scale_height = 8400 * u.m #Can make arguments for `8500 m to ~7500 m, but the higher temperatures typical of the lower atmosphere are more relevant here.
-	site_elevation = 2016 * u.m #Kitt Peak/WIYN
+	site_elevation = 2400 * u.m #ESO 3.6 m telescope, La Silla, Chile
 	atmo = airmass(zenith_angle, site_elevation, scale_height)
 
 	λ_peak = λ_peak(Teff, λ_min, λ_max)
 	#BeattyWaves = np.arange(λ_min/u.angstrom, λ_max/u.angstrom, Δλ/u.angstrom)
-	guess = time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak, well_depth)
-	actual, readout = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time)
-	print("guess, actual exposure, readout(s), total")
-	print(guess, actual, readout, actual+readout)
+	print("Exposure time test ("+str(sigma_v)+" km/s target precision) with HARPS on Alpha Cen B. 76 seconds on-sky expected.")
+	guess = time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak, well_depth)
+	actual, readout, exposure, number  = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time)
+	print("guess, actual exposure, readout(s), total, 'real' individual exposure, number of exposures")
+	print(guess, actual, readout, actual+readout, exposure, number)

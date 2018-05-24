@@ -18,7 +18,7 @@ def extinction(λ):
 	# Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
 	return (0.09 + (3080.0/λ)**4)
 
-def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λmin, λmax, dλ):
+def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λmin, λmax, dλ, n_expose):
 	# Need to fix to make less unit dependent
 	λ_max = λmax.to(u.angstrom).value
 	λ_min = λmin.to(u.angstrom).value
@@ -64,7 +64,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 	for λ in np.arange(0, len(BeattyWaves)):
 		pix = n_pix*Δλ*R/I_0[λ][0]
 		# For now, assume equal signal per pixel. A gaussian would be better.
-		I_0[λ][3] = I_0[λ][2]/pix*gain / np.sqrt(I_0[λ][2]/pix*gain + (gain*read_noise*2.2*2)**2 + (gain*dark_current*exptime)**2)
+		I_0[λ][3] = I_0[λ][2]/pix*gain / np.sqrt(I_0[λ][2]/pix*gain + (gain*read_noise*2.2*2*n_expose)**2 + (gain*dark_current*exptime)**2)
 		I_0[λ][4] = I_0[λ][3]**2 * pix / ((c.c/(u.km/u.s)).si * Δλ/I_0[λ][0])
 	
 	#print(I_0)
@@ -161,7 +161,7 @@ if __name__ == '__main__':
 			for obs in starobs:
 		# get v_rms for every observation
 	'''
-	site_elevation = 2016.0 # m
+	site_elevation = 2400.0 # m
 
 	# Beatty spectra (simulated): 100 A chunks; Solar metallicity;
 	# R = 100k (4000-6500 A), 165000 (6500-10000 A), 88000 (10000A - 25000 A)
@@ -198,7 +198,7 @@ if __name__ == '__main__':
 	theta_rot = 1.13*vsini.si # Rough approximation, but rotational effects are near-linear, no matter limb-darkening.
 	vmac = float('nan') #actual value uncertain in my sources.
 	
-	# HARPS instrument on ??? telescope (nominally in La Silla)
+	# HARPS instrument on ESO 3.6 m telescope (in La Silla)
 	telescope = 3.566 * u.m #diameter
 	#area = np.pi * (telescope/2)**2 # telescope area, central obstruction ignored
 	area = 8.8564 * u.m * u.m
@@ -215,6 +215,12 @@ if __name__ == '__main__':
 	well_depth = 30000 #electrons (or photons)
 	read_time = 10 * u.s
 	exptime = 76 * u.s
+	exposures = 1
 
-	print("Radial Velocity test with HARPS on Alpha Cen B. Expected precision 5 cm/s (5e-5 km/s):")
-	print(rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ))
+	print("Radial Velocity test ("+str(exptime)+" exposure) with HARPS on Alpha Cen B. Expected precision 5 cm/s (5e-5 km/s):")
+	print(rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, exposures))
+
+	exptime = 7 * u.s
+	exposures = 11
+	print("Radial Velocity test ("+str(exposures)+"x "+str(exptime)+" exposures) with HARPS on Alpha Cen B. Expected precision 5 cm/s (5e-5 km/s):")
+	print(rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, 1)/np.sqrt(exposures))
