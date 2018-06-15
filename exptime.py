@@ -70,9 +70,12 @@ def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, eff
 	#print("Estimated exposure time", time_guess, time_guess.si)
 	return time_guess.si
 
-def time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time):
+def time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time, t_min):
 	rv_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, 2)
 	time_actual = exptime * (rv_actual/sigma_v)**2
+	if (time_actual < t_min):
+		print("Warning: nominal exposure time is less than minimum time.")
+		time_actual = t_min
 	number_exposures = np.ceil(time_actual/exptime)
 	time_exposure = time_actual/number_exposures
 	reads = read_time * number_exposures
@@ -107,6 +110,7 @@ if __name__ == '__main__':
 	v_mac = np.float('nan') # km/s, but exact value unclear
 	
 	sigma_v = 5e-5 # target single measurement photon noise precision in km/s
+	t_min = 0 * u.s # minimum exposure time in seconds. Typically 300 to even out p-mode oscillations
 	
 	# Atmo
 	zenith_angle = 0 # Can be read in from stellar observations!
@@ -118,6 +122,6 @@ if __name__ == '__main__':
 	#BeattyWaves = np.arange(λ_min/u.angstrom, λ_max/u.angstrom, Δλ/u.angstrom)
 	print("Exposure time test ("+str(sigma_v)+" km/s target precision) with HARPS on Alpha Cen B. 76 seconds on-sky expected.")
 	guess = time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak, well_depth)
-	actual, readout, exposure, number  = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time)
+	actual, readout, exposure, number  = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time, t_min)
 	print("guess, actual exposure, readout(s), total, 'real' individual exposure, number of exposures")
 	print(guess, actual, readout, actual+readout, exposure, number)
