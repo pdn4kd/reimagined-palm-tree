@@ -1,6 +1,8 @@
 # reimagined-palm-tree
 Spectrograph performance, both in terms of an exposure time calculation for a target SNR, and RMS velocity error for input signal and stellar parameters.
 
+[![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)
+
 All wavelengths are in ångströms, and all velocities are in m/s if unlabled (If lableled, they are likely to be in km/s).
 Also, distances are in parsecs, and star sizes are in solar radii. Usage of astropy.units should limit the need to keep careful track of what is used where.
 

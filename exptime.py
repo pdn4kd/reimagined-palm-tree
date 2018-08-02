@@ -29,12 +29,12 @@ def λ_peak(Teff, λ_min=0 * u.angstrom, λ_max=1e13 * u.angstrom):
 	return λ
 
 def extinction(λ):
-	'''Returns atmospheric extinction coefficient (in magnitudes/airmass), given a wavelength (n Angstroms'''
-	# best guess, based on measurements at Texas A&M Univeristy, and CFHT in Mauka Kea
-	# http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
-	# http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
-	# Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
-	# Rayleigh scattering, and a general scattering absorption are considered, but the Water vapor, etc lines in the IR are not!
+	'''Returns atmospheric extinction coefficient (in magnitudes/airmass), given a wavelength (n Angstroms
+	best guess, based on measurements at Texas A&M Univeristy, and CFHT in Mauka Kea
+	http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
+	http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
+	Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
+	Rayleigh scattering, and a general scattering absorption are considered, but the Water vapor, etc lines in the IR are not!'''
 	return (0.09 + (3080.0/λ)**4)
 
 def airmass(zenith_angle, site_elevation=0, scale_height=8400):
@@ -44,12 +44,11 @@ def airmass(zenith_angle, site_elevation=0, scale_height=8400):
 def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak, well_depth):
 	'''Generating an initial guess on exposure time. We assume a saturated detector is appropriate, thus putting one in the photon noise limited regime.'''
 	BTSettl = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
-	#print("Teff:", Teff, " BT-Settl:", round(Teff,-2), " Beatty RV:", round(Teff/200)*200)
 	
 	# BT Settl spectra are labled by Teff, and available every 100 K.
 	# These spectra have a wavelength (Angstroms), and a flux (1 erg/s/cm^2/Angstrom) column
 	# sum of flux(λ)*Δλ(λ)/1e8 == total flux (in power/area) emitted. 
-	# Multiply bt stellar_radius^2/distance^2 for recieved.
+	# Multiply bt stellar_radius^2/distance^2 for recieved instead of emitted.
 	# Spectra downloaded from other sources will use different units!
 	photons = 0
 	#Counting up photons for SNR -> exposure time calc
@@ -58,7 +57,7 @@ def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, eff
 	for i in np.arange(0, len(BTSettl)-1):
 		if((BTSettl[i][0]>= λ_peak/u.angstrom-50) and (BTSettl[i][0] <= λ_peak/u.angstrom+15)):
 			power = (BTSettl[i][1]*u.erg/u.cm**2/u.s/u.angstrom) * ((BTSettl[i+1][0]-BTSettl[i][0]) * u.angstrom)
-			power *= rstar**2/dstar**2 #rescaling emitted spectrum based on stellar surface area and distance from us
+			power *= rstar**2/dstar**2
 			opacity = np.exp(-extinction(BTSettl[i][0]) * atmo)
 			power *= opacity #rescaling because of atmospheric scattering/absorption.
 			power = power.si
@@ -90,7 +89,6 @@ if __name__ == '__main__':
 	λ_min = 3800 * u.angstrom
 	λ_max = 6800 * u.angstrom
 	Δλ = 100 * u.angstrom
-	#BeattyWaves = np.arange((λ_min+Δλ/2)/u.angstrom, (λ_max+Δλ/2)/u.angstrom, Δλ/u.angstrom)
 	R = 110000 #110k or 120k, depending on source
 	gain = 1/1.42 # ADU/e-, assume 1:1 photon to electron generation
 	read_noise = 7.07 #RMS of ± spurious electrons
@@ -119,7 +117,6 @@ if __name__ == '__main__':
 	atmo = airmass(zenith_angle, site_elevation, scale_height)
 
 	λ_peak = λ_peak(Teff, λ_min, λ_max)
-	#BeattyWaves = np.arange(λ_min/u.angstrom, λ_max/u.angstrom, Δλ/u.angstrom)
 	print("Exposure time test ("+str(sigma_v)+" km/s target precision) with HARPS on Alpha Cen B. 76 seconds on-sky expected.")
 	guess = time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak, well_depth)
 	actual, readout, exposure, number  = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time, t_min)
