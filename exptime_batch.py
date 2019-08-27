@@ -1,7 +1,7 @@
 '''
 Calculating all exposure times given a stellar input list. Requires a "targetstars.csv" in the same folder, which it uses for Teff, Fe/H, log(g), v*sin(i), distance, and stellar radius. Instrumental parameters are taken from config/instrument.ini. Output is eta_list.txt, which is formatted to be useable by the dispatch scheduler (move to secret/).
 
-This is a somewhat ad-hoc script, and you absolutely should edit it if you find other choices of headings clearer. Likewise sigma_v for differing precisions. In particular, note that it uses weird bespoke column names for many common values.
+This is a somewhat ad-hoc script, and you absolutely should edit it if you find other choices of headings clearer. Likewise sigma_v for differing precisions.
 '''
 
 import numpy as np
@@ -33,9 +33,14 @@ for star in starlist:
     λ_peak = exptime.λ_peak(Teff, λ_min, λ_max)
     FeH = star['Sun']
     logg = star['cms']
-    vsini = star['kms'] * u.km / u.s
-    theta_rot = 1.13 * star['kms']
-    if np.isnan(vsini):
+    try:
+        vsini = np.float(star['kms']) * u.km / u.s
+        theta_rot = 1.13 * np.float(star['kms'])
+    except:
+        print("Warning: v * sin(i) not found. Assuming 2 km/s")
+        vsini = 2.0 * u.km / u.s
+        theta_rot = 2.26
+    if np.isnan(theta_rot):
         print("Warning: v * sin(i) not found. Assuming 2 km/s")
         vsini = 2.0 * u.km / u.s
         theta_rot = 2.26
@@ -43,6 +48,7 @@ for star in starlist:
     dstar = star['pc'] * u.pc
     try:
         vmac = star['Vmac']
+        vmac + 1.0
     except:
         print("Warning: Macroturbulence not found. Estimating from other properties.")
         vmac = np.float('nan')
