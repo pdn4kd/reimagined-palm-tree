@@ -18,6 +18,8 @@ Generates exposure times, and creates the target list of stars (eta_list.txt) th
 
 As this uses rvrms.py, it suffers from that file's limitations. Also, macroturbulence really should be using observational values where possible.
 
+Required Inputs: Effective Temperature, Metallicity, Distance, Radius. Optional: Macroturbulence (estimated from temperature if unavailable), V*sin(i) (assumed to be 2 km/s if unavailable)
+
 #### exptime_demo.py
 Simple example of calculating exposure times across a range of magnitudes. Demonstrates that you can analytically get an exposure time if you have a target SNR. (Target radial velocities are rather more complex)
 
@@ -26,7 +28,7 @@ Calculates SNR and RV precision, given telescope and stellar parameters. Radial 
 
 Example spectra are included (named 1700-9800, every 100 K below 7000 K and every 200 K above). Also uses http://www.aanda.org/articles/aa/full/2001/29/aa1316/aa1316.right.html for reference.
 
-Current limitations: Detector properties not that closely based on actual hardware (especially sensitivity vs wavelength), macroturbulence assumed based on effective temperature instead of observations, microturbulence fixed at ~1 km/s; granulation/starspots/other jitter not considered; fixed assumptions made of Teff (200 K steps for RV information, must be between 2600 K and 7600 K inclusive, Stellar spectra in 100 K steps); wavelength ranges (400-2500 nm); spectrograph R values made based on wavelength range.
+Current limitations: Detector properties not that closely based on actual hardware (especially sensitivity vs wavelength), microturbulence fixed at ~1 km/s; granulation/starspots/other jitter not considered; fixed assumptions made of Teff (200 K steps for RV information, must be between 2600 K and 7600 K inclusive, Stellar spectra in 100 K steps); wavelength ranges (400-2500 nm); spectrograph R values made based on wavelength range.
 
 The spectrograph issues bother pdn4kd greatly, and a way to not have to use the table (with its assumptions on R and wavelength ranges) would be greatly appreciated.
 
