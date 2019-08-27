@@ -1,7 +1,7 @@
 '''
 Calculating all exposure times given a stellar input list. Requires a "targetstars.csv" in the same folder, which it uses for Teff, Fe/H, log(g), v*sin(i), distance, and stellar radius. Instrumental parameters are taken from config/instrument.ini. Output is eta_list.txt, which is formatted to be useable by the dispatch scheduler (move to secret/).
 
-This is a somewhat ad-hoc script, and you absolutely should edit it if you find other choices of headings clearer. Likewise sigma_v for differing precisions.
+This is a somewhat ad-hoc script, and you absolutely should edit it if you find other choices of headings clearer. Likewise sigma_v for differing precisions. In particular, note that it uses weird bespoke column names for many common values.
 '''
 
 import numpy as np
@@ -35,9 +35,17 @@ for star in starlist:
     logg = star['cms']
     vsini = star['kms'] * u.km / u.s
     theta_rot = 1.13 * star['kms']
+    if np.isnan(vsini):
+        print("Warning: v * sin(i) not found. Assuming 2 km/s")
+        vsini = 2.0 * u.km / u.s
+        theta_rot = 2.26
     rstar = star['solRad'] * u.solRad
     dstar = star['pc'] * u.pc
-    vmac = star['Vmac']
+    try:
+        vmac = star['Vmac']
+    except:
+        print("Warning: Macroturbulence not found. Estimating from other properties.")
+        vmac = np.float('nan')
     dark_current = sim.instruments[0].dark_current / u.hour
     read_time = sim.instruments[0].read_time * u.s
     guess = exptime.time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_peak, sim.instruments[0].well_depth)
