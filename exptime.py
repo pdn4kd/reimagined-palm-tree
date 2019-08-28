@@ -43,7 +43,11 @@ def airmass(zenith_angle, site_elevation=0, scale_height=8400):
 
 def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak, well_depth):
 	'''Generating an initial guess on exposure time. We assume a saturated detector is appropriate, thus putting one in the photon noise limited regime.'''
-	BTSettl = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
+	# We have spectra available every 100 K for 1700-7000 K, but only every 200 for 7000-9800.
+	temp = int(round(Teff,-2))
+	if temp > 7000:
+		temp = int(2*round(temp/2,-2))
+	BTSettl = np.genfromtxt(str(temp), dtype=float)
 	
 	# BT Settl spectra are labled by Teff, and available every 100 K.
 	# These spectra have a wavelength (Angstroms), and a flux (1 erg/s/cm^2/Angstrom) column

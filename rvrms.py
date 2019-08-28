@@ -28,15 +28,18 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 	BeattyWaves = np.arange((λ_min+Δλ/2), (λ_max+Δλ/2), Δλ)
 	
 	#BTSettl = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
-	# BT Settl spectra are labled by Teff, and available every 100 K.
+	# BT Settl spectra are labled by Teff, and available every 100 K (1700-7000 K) or 200 K (7000-9800 K).
 	# These spectra have a wavelength (Angstroms), and a flux (1 erg/s/cm^2/Angstrom) column
 	# sum of flux(λ)*Δλ(λ) == total flux (in power/area) emitted. 
 	# Multiply bt stellar_radius^2/distance^2 for recieved.
 	# Spectra downloaded from other sources will use different units!
 	#
-	# Note that Beatty RV information is only available every 200 K.
+	# Note that Beatty RV information is only available every 200 K and over a narrower range (2600-7600 K).
 	
-	model = np.genfromtxt(str(int(round(Teff,-2))), dtype=float)
+	temp = int(round(Teff,-2))
+	if temp > 7000:
+		temp = int(2*round(temp/2,-2))
+	model = np.genfromtxt(str(temp), dtype=float)
 	#preparing
 	for x in np.arange(0, len(model)):
 		model[x][1] *= kstar
