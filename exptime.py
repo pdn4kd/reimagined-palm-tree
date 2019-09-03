@@ -76,12 +76,18 @@ def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, eff
 def time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time, t_min):
 	rv_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, 2)
 	time_actual = exptime * (rv_actual/sigma_v)**2
-	if (time_actual < t_min):
-		print("Warning: nominal exposure time is less than minimum time.")
-		time_actual = t_min
 	number_exposures = np.ceil(time_actual/exptime)
+	# Effectively redoing the exposure time to always between 0.5 and 1 saturation times.
 	time_exposure = time_actual/number_exposures
 	reads = read_time * number_exposures
+	if (time_actual+(number_exposures-1)*read_time < t_min):
+		print("Warning: nominal exposure time is less than minimum time.")
+		# Increasing the number of exposures so that the time between the
+		# start of the first and end of the last is long enough to average
+		#  out over the p-mode oscillations.
+		number_exposures = np.ceil((t_min+read_time)/(time_exposure+read_time))
+		time_actual = time_exposure*number_exposures
+		reads = read_time * number_exposures
 	return time_actual, reads, time_exposure, number_exposures
 
 if __name__ == '__main__':
