@@ -22,7 +22,7 @@ zenith_angle = 10*np.pi/180 #obviously should be set based on typical object alt
 atmo = exptime.airmass(zenith_angle,sim.elevation,8400)
 area = sim.telescopes[0].area * u.m * u.m
 
-starlist = np.genfromtxt("targetstars.csv", delimiter=",", dtype=None, names=True)
+starlist = np.genfromtxt("targetstars.csv", delimiter=",", dtype=None, names=True, encoding=None)
 eta_list = open("eta_list.txt", 'w')
 eta_list.write("Automatically generated list by exptime_batch.py on "+now+"\n\n")
 eta_list.write(" IdentList\n----------\n\n")
