@@ -22,7 +22,7 @@ zenith_angle = 10*np.pi/180 #obviously should be set based on typical object alt
 atmo = exptime.airmass(zenith_angle,sim.elevation,8400)
 area = sim.telescopes[0].area * u.m * u.m
 
-starlist = np.genfromtxt("targetstars.csv", delimiter=",", dtype=None, names=True, encoding=None)
+starlist = np.genfromtxt("targetstars.csv", delimiter=",", dtype=None, names=True)
 eta_list = open("eta_list.txt", 'w')
 eta_list.write("Automatically generated list by exptime_batch.py on "+now+"\n\n")
 eta_list.write(" IdentList\n----------\n\n")
@@ -62,7 +62,15 @@ for star in starlist:
     except ValueError:
         coords = coord.SkyCoord(ra=star['_RAJ2000']*u.degree, dec=star['_DEJ2000']*u.degree)
         RADEC = coords.to_string('hmsdms')
-    MK = str(star['MK'])[2:-1] #Spectra type is nice to have
+        # Unfortunately, Astropy as of the writing of this (2019-09-09) does not convert to
+        # Simbad style format (spaces between hours, minutes, etc) but with letters in between.
+        # So we fix this with a few regexes.
+        RADEC = re.sub('[dhm]', ' ', RADEC)
+        RADEC = re.sub('s', '', RADEC)
+    try:
+        MK = str(star['MK'])[2:-1] #Spectra type is nice to have
+    except:
+        MK = "XXX"
     if MK == "":
         MK = "XXX"
     line = '0'+'\t'+str(star['Name'])[2:-1]+'\t'+RADEC+'\t'+str(star['mag'])+"\t"+MK+"\t"+str((actual+readout).to(u.minute).value)+'\t'+str(actual.to(u.minute).value)+'\t'+str(exposure.to(u.minute).value)+'\t'+str(int(number))+'\n'
