@@ -10,6 +10,7 @@ from astropy import units as u
 from astropy import coordinates as coord
 import simulation
 import datetime
+import re
 now = str((datetime.datetime.now()).isoformat())
 sim = simulation.simulation('simulation.ini')
 
