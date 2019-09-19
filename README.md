@@ -6,7 +6,7 @@ Spectrograph performance, both in terms of an exposure time calculation for a ta
 All wavelengths are in ångströms, and all velocities are in m/s if unlabled (If lableled, they are likely to be in km/s).
 Also, distances are in parsecs, and star sizes are in solar radii. Usage of astropy.units should limit the need to keep careful track of what is used where.
 
-Required libraries: numpy, astropy
+Required libraries: numpy, astropy, re
 
 Requires Python 3, notably due to extensive unicode variable names.
 
@@ -18,7 +18,18 @@ Generates exposure times, and creates the target list of stars (eta_list.txt) th
 
 As this uses rvrms.py, it suffers from that file's limitations. Also, macroturbulence really should be using observational values where possible.
 
-Required Inputs: Effective Temperature, Metallicity, Distance, Radius. Optional: Macroturbulence (estimated from temperature if unavailable), V*sin(i) (assumed to be 2 km/s if unavailable)
+''input file information''
+The input file (targetstars.csv by default) is a CSV that requires the following parameters (with the default column names in parentheses): Effective Temperature (K), Metallicity (FeH), Distance (pc), Radius (solRadius), log(g) (cms). Optional: Macroturbulence (Vmac, estimated from temperature if unavailable), V*sin(i) (kms, assumed to be 2 km/s if unavailable)
+While not needed for the RV precision and exposure time calculations, several additional columns are needed for the output: an identifying name (Name); right ascension (_RAJ2000); declination (_DEJ2000); a magnitude (mag); and a spectral type (MK).
+These are somewhat baroque/nonstandard names, which hopefully means that the user has closely checked their data.
+
+''output file information''
+The file is in a quasi-Simbad format, with tabs between the major values (except for RA/Dec, which are seperated by a space). The "columns" are: # (an arbitrary number, set to 0 by default. This can be changed if desired); typed ident (a name for the target object); coord1 (ICRS,J2000/2000) (RA/DEC in HMS/DMS format); Mag V (V-band magnitude, usually apparent); spec type (Spectral Type)
+ExpTime is total time spent in terms of imaging and readouts that the telescope spends pointed at a given target. ("wall-clock" time)
+
+SkyTime is the time with the shutter open staring at a given target (SingleExposure * N).
+
+SingleExposure is how long an individual exposure (excluding readout) as part of single epoch measurement takes.
 
 #### exptime_demo.py
 Simple example of calculating exposure times across a range of magnitudes. Demonstrates that you can analytically get an exposure time if you have a target SNR. (Target radial velocities are rather more complex)
