@@ -46,7 +46,7 @@ def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, eff
 	# We have spectra available every 100 K for 1700-7000 K, but only every 200 for 7000-9800.
 	temp = int(round(Teff,-2))
 	if temp > 7000:
-		temp = int(2*round(temp/2,-2))
+		temp = int(2*round(Teff/2,-2))
 	BTSettl = np.genfromtxt(str(temp), dtype=float)
 	
 	# BT Settl spectra are labled by Teff, and available every 100 K.

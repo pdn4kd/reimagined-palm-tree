@@ -38,7 +38,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 	
 	temp = int(round(Teff,-2))
 	if temp > 7000:
-		temp = int(2*round(temp/2,-2))
+		temp = int(2*round(Teff/2,-2))
 	model = np.genfromtxt(str(temp), dtype=float)
 	#preparing
 	for x in np.arange(0, len(model)):
@@ -81,13 +81,18 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 	Q_opt = 0 #3 different wavelength bands for quality factors because details of the stellar correction factors change over these.
 	Q_red = 0
 	Q_nir = 0
+	# Temperature "cap" so that you can still get best effort RVs for stars that are too hot. Should not be trusted.
+	TeffK = Teff
+	if (TeffK > 7699):
+		print("Warning: star is hotter than range of available RV information spectra. (2600-7600 K)")
+		TeffK = 7699
 	# Should this table really be opened in here and not passed from elsewhere/loaded at startup?
 	beatty = np.genfromtxt("table1.dat", dtype=None)
 	beatty.dtype.names = ('Angstrom', 'Teff', 'Uncertaintykms')
 	for b in beatty: #each line of b is a tuple with wavelength, teff, uncertainty
 	#Teff is rounded to nearest 200 because of limitations in Beatty RVs
 	#if b[0] is in wavelength range, and b[1] is in Teff range, use the uncertainty
-		if ((b[0] >= λ_min) and (b[0] <= λ_max) and b[1] == round(Teff/200)*200):
+		if ((b[0] >= λ_min) and (b[0] <= λ_max) and b[1] == round(TeffK/200)*200):
 			for i in I_0:
 				if i[0] == b[0]:
 					#print(b[0], b[2], 1/np.sqrt(i[4]/b[2]**2))
@@ -136,8 +141,10 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 	# Teff between 5000 K and 6500 K most accurate, but up to 7600 K okay.
 	# Empirical numbers are better if available.
 	if (v_mac == "") or (v_mac == "nan") or (v_mac < 0.0) or np.isnan(v_mac):
-		if (Teff > 5000) and (Teff < 7600):
+		if (Teff > 5000):#if (Teff > 5000) and (Teff < 7600):
 			v_mac = 1.976 + 16.14*dTeff + 19.713*dTeff**2
+			if (Teff > 7600):
+				print("Warning: Teff >7600 K. Macroturbulence estimate is innacurate.")
 		elif (Teff <= 5000): # exactly 5000 K not specified by Beatty, but this is more conservative.
 			v_mac = 0.51
 	theta_mac = np.sqrt(2*np.log(2))*v_mac
