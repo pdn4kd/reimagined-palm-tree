@@ -17,14 +17,17 @@ sim = simulation.simulation('simulation.ini')
 Δλ = 100 * u.angstrom
 λ_max = sim.instruments[0].λmax * u.angstrom
 λ_min = sim.instruments[0].λmin * u.angstrom
-sigma_v = 3e-5 # km/s
 t_min = 300 * u.s # 5 minutes in seconds
 zenith_angle = 10*np.pi/180 #obviously should be set based on typical object altitude
 atmo = exptime.airmass(zenith_angle,sim.elevation,8400)
 area = sim.telescopes[0].area * u.m * u.m
 
+sigma_v = 3e-5 # km/s
 starlist = np.genfromtxt("targetstars.csv", delimiter=",", dtype=None, names=True)
 eta_list = open("eta_list.txt", 'w')
+eta_csv = open("eta_list.csv", 'w')
+
+eta_csv.write("name,Exp time,Sky Time,Single Exposure,Number of Exposures\n")
 eta_list.write("Automatically generated list by exptime_batch.py on "+now+"\n\n")
 eta_list.write(" IdentList\n----------\n\n")
 eta_list.write(" # \ttyped ident\t  coord1 (ICRS,J2000/2000)     \tMag V\t      spec type  \tExp Time\tSky Time\tSingle Exposure\tNumber of Exposures\n")
@@ -77,9 +80,12 @@ for star in starlist:
     line = '0'+'\t'+str(star['Name'])[2:-1]+'\t'+RADEC+'\t'+str(star['mag'])+"\t"+MK+"\t"+str((actual+readout).to(u.minute).value)+'\t'+str(actual.to(u.minute).value)+'\t'+str(exposure.to(u.minute).value)+'\t'+str(int(number))+'\n'
     print(line)
     eta_list.write(line)
+    line = str(star['Name'])[2:-1]+","+str((actual+readout).to(u.minute).value)+','+str(actual.to(u.minute).value)+','+str(exposure.to(u.minute).value)+','+str(int(number))+'\n'
+    eta_csv.write(line)
     #print("guess, actual exposure, readout(s), total")
     #print(guess, actual, readout.to(u.minute), actual+readout)
 eta_list.close()
+eta_csv.close()
 '''
 def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak):
 actual, readout = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ)

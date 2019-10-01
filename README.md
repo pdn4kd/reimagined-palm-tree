@@ -14,7 +14,7 @@ Requires Python 3, notably due to extensive unicode variable names.
 Calculates exposure time to reach a target SNR, given telescope parameters and target apparent magnitude. Also acts as a library for exptime_batch.py. Depends on rvrms.py
 
 #### exptime_batch.py
-Generates exposure times, and creates the target list of stars (eta_list.txt) that dispatch_scheduler (https://github.com/pdn4kd/dispatch_scheduler) needs, given an existing CSV with the relevant properties (targetstars.csv). Relies on the dispatch_scheduler for telescope, site, etc. parameters. To use, put exptime_batch, exptime, and rvrms in the dispatch_scheduler base directory.
+Generates exposure times, and creates the target list of stars (eta_list.txt) that dispatch_scheduler (https://github.com/pdn4kd/dispatch_scheduler) needs, given an existing CSV with the relevant properties (targetstars.csv). Secondarily, it generates a CSV (eta_list.csv) with the object names and outputs for data analysis purposes. Relies on the dispatch_scheduler for telescope, site, etc. parameters. To use, put exptime_batch, exptime, and rvrms in the dispatch_scheduler base directory.
 
 As this uses rvrms.py, it suffers from that file's limitations. Also, macroturbulence really should be using observational values where possible.
 
