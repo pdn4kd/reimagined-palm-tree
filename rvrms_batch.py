@@ -5,13 +5,14 @@ import numpy as np
 import rvrms
 from astropy import units as u
 
-#load up full simulation bits
+#load up full simulation bits, will drop later
 import simulation
-sim = simulation.simulation('simulation.ini') #metadata is assumed not to change
+sim = simulation.simulation('simulation.ini') #not necessary if metadata is included
 import datetime
 now = str((datetime.datetime.now()).isoformat())
 
 #opening a folder with results from a previous run
+#borrowed from vis.py
 import glob
 import os
 simnumber = input('Enter 5 digit sim number (including any leading zeros): ')
@@ -26,12 +27,10 @@ area = sim.telescopes[0].area * u.m * u.m
 dark_current = sim.instruments[0].dark_current / u.hour
 instrms = sim.instruments[0].general_noise
 
-#target_list = np.genfromtxt("targetstars.csv", delimiter=",", dtype=("U11", "U10", "U9", float, float, float, float, int, float, float, float), names=True) #bad, should have it in observation run metadata
-target_list = np.genfromtxt("targetstars.csv", delimiter=",", dtype=(float, float, "U15", float, float, float, float, float, float, float, float, float, "U30"), names=True)
-#target_list = np.genfromtxt("targetstars.csv", delimiter=",", names=True)
+target_list = np.genfromtxt("targetstars.csv", delimiter=",", dtype=None, names=True, encoding=None)
 for target in target_list:
 	if (os.access(simpath+target['Name']+".txt", os.R_OK)):#with current bad setup, target listiing might not include all stars
-		star = np.genfromtxt(simpath+target['Name']+".txt", delimiter=",", names=True)
+		star = np.genfromtxt(simpath+target['Name']+".txt", delimiter=",", names=True, encoding=None)
 		if (star.shape != ()):
 			# if we have actual observations, not just the test/setup one, we can calculate RVs
 			print(target['Name'])
