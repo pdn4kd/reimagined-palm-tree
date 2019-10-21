@@ -22,6 +22,7 @@ As this uses rvrms.py, it suffers from that file's limitations. Also, macroturbu
 The input file (targetstars.csv by default) is a CSV that requires the following parameters (with the default column names in parentheses): Effective Temperature (K), Metallicity (FeH), Distance (pc), Radius (solRadius), log(g) (cms). Optional: Macroturbulence (Vmac, estimated from temperature if unavailable), V*sin(i) (kms, assumed to be 2 km/s if unavailable)
 While not needed for the RV precision and exposure time calculations, several additional columns are needed for the output: an identifying name (Name); right ascension (_RAJ2000); declination (_DEJ2000); a magnitude (mag); and a spectral type (MK).
 These are somewhat baroque/nonstandard names, which hopefully means that the user has closely checked their data.
+An example targetstars.csv is included for clarity.
 
 ''output file information''
 The file is in a quasi-Simbad format, with tabs between the major values (except for RA/Dec, which are seperated by a space). The "columns" are: # (an arbitrary number, set to 0 by default. This can be changed if desired); typed ident (a name for the target object); coord1 (ICRS,J2000/2000) (RA/DEC in HMS/DMS format); Mag V (V-band magnitude, usually apparent); spec type (Spectral Type)
