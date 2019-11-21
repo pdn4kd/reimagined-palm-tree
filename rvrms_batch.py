@@ -43,7 +43,12 @@ for target in target_list:
 			theta_rot = 1.13 * target['kms']
 			rstar = target['solRad'] * u.solRad
 			dstar = target['pc'] * u.pc
-			vmac = target['Vmac']
+			try:
+				vmac = star['Vmac']
+				vmac + 1.0
+			except:
+				print("Warning: Macroturbulence not found. Estimating from other properties.")
+				vmac = np.float('nan')
 			for i in star:
 				exptime = i['duration'] * u.minute
 				zenith_angle = (90-i['altitude'])*np.pi/180.0
