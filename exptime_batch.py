@@ -22,7 +22,7 @@ zenith_angle = 10*np.pi/180 #obviously should be set based on typical object alt
 atmo = exptime.airmass(zenith_angle,sim.elevation,8400)
 area = sim.telescopes[0].area * u.m * u.m
 
-sigma_v = 3e-5 # km/s
+sigma_v = 27e-5 # km/s
 starlist = np.genfromtxt("targetstars.csv", delimiter=",", dtype=None, names=True)
 eta_list = open("eta_list.txt", 'w')
 eta_csv = open("eta_list.csv", 'w')
@@ -58,8 +58,8 @@ for star in starlist:
         vmac = np.float('nan')
     dark_current = sim.instruments[0].dark_current / u.hour
     read_time = sim.instruments[0].read_time * u.s
-    guess = exptime.time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_peak, sim.instruments[0].well_depth)
-    actual, readout, exposure, number = exptime.time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, guess, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, read_time, t_min)
+    guess, SNR_sat = exptime.time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_peak, sim.instruments[0].well_depth)
+    actual, readout, exposure, number = exptime.time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, guess, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, read_time, t_min, SNR, SNR_sat)
     # We don't know if we're getting decimal degrees or sexigesimal formatted coordinates
     try:
         RADEC = str(star['hms'])[2:-1]+' '+str(star['dms'])[2:-1]

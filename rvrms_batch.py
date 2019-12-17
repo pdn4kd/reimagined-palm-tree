@@ -35,7 +35,7 @@ for target in target_list:
 			# if we have actual observations, not just the test/setup one, we can calculate RVs
 			print(target['Name'])
 			star_rms = open(simpath+target['Name']+"_rv.txt", 'w')
-			star_rms.write("obs_start,obs_end,duration,altitude,azimuth,exposures,photonprec,instprec,rvprec,rvmeas\n")
+			star_rms.write("obs_start,obs_end,duration,altitude,azimuth,exposures,photonprec,instprec,rvprec,rvmeas,snr_actual\n")
 			Teff = target['K']
 			FeH = target['Sun']
 			logg = target['cms']
@@ -54,10 +54,11 @@ for target in target_list:
 				zenith_angle = (90-i['altitude'])*np.pi/180.0
 				airmass = np.exp(-sim.elevation/8400)/np.cos(zenith_angle)
 				n_expose = i['exposures']
-				photonrms = 1000*rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, airmass, exptime, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, n_expose)
+				photonrms, SNR_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, airmass, exptime, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, n_expose)
+				photonrms *= 1000
 				vrms = np.sqrt(photonrms**2+instrms**2)
 				vmeas = np.random.normal(0.0, vrms)
-				line = str(i['obs_start'])+","+str(i['obs_end'])+","+str(i['duration'])+","+str(i['altitude'])+","+str(i['azimuth'])+","+str(i['exposures'])+","+str(photonrms)+","+str(instrms)+","+str(vrms)+","+str(vmeas)+"\n"
+				line = str(i['obs_start'])+","+str(i['obs_end'])+","+str(i['duration'])+","+str(i['altitude'])+","+str(i['azimuth'])+","+str(i['exposures'])+","+str(photonrms)+","+str(instrms)+","+str(vrms)+","+str(vmeas)+","+str(SNR_actual)+"\n"
 				star_rms.write(line)
 				print(vrms, vmeas)
 			star_rms.close()

@@ -69,6 +69,10 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 		# For now, assume equal signal per pixel. A gaussian would be better.
 		I_0[λ][3] = I_0[λ][2]/pix*gain / np.sqrt(I_0[λ][2]/pix*gain + (gain*read_noise*2.2*2*n_expose)**2 + (gain*dark_current*exptime)**2)
 		I_0[λ][4] = I_0[λ][3]**2 * pix / ((c.c/(u.km/u.s)).si * Δλ/I_0[λ][0])
+	SNR_actual = 0
+	for I_SNR in I_0:
+		if (I_SNR[3]> SNR_actual):
+			SNR_actual = I_SNR[3]
 	
 	#print(I_0)
 	#print(sum(I_0[:,1]), "W/m^2")
@@ -161,7 +165,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 	sigma_v = sigma
 	#print(sigma)
 	#print(1/np.sqrt(Q_opt/sigma_opt**2), 1/np.sqrt(Q_red/sigma_red**2), 1/np.sqrt(Q_nir/sigma_nir**2))
-	return sigma_v
+	return sigma_v, SNR_actual
 
 if __name__ == '__main__':
 	'''
