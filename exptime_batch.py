@@ -59,7 +59,7 @@ for star in starlist:
     dark_current = sim.instruments[0].dark_current / u.hour
     read_time = sim.instruments[0].read_time * u.s
     guess, SNR_sat = exptime.time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_peak, sim.instruments[0].well_depth)
-    actual, readout, exposure, number = exptime.time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, guess, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, read_time, t_min, SNR, SNR_sat)
+    actual, readout, exposure, number, SNR_actual = exptime.time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, guess, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, read_time, t_min, sim.instruments[0].SNR, SNR_sat)
     # We don't know if we're getting decimal degrees or sexigesimal formatted coordinates
     try:
         RADEC = str(star['hms'])[2:-1]+' '+str(star['dms'])[2:-1]
