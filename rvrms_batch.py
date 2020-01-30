@@ -39,8 +39,21 @@ for target in target_list:
 			Teff = target['K']
 			FeH = target['Sun']
 			logg = target['cms']
-			vsini = target['kms'] * u.km / u.s
-			theta_rot = 1.13 * target['kms']
+    try:
+        vsini = np.float(star['kms']) * u.km / u.s
+        theta_rot = 1.13 * np.float(star['kms'])
+    except:
+        print("Warning: v * sin(i) not found. Assuming 2 km/s")
+        vsini = 2.0 * u.km / u.s
+        theta_rot = 2.26
+    if np.isnan(theta_rot):
+        print("Warning: v * sin(i) not found. Assuming 2 km/s")
+        vsini = 2.0 * u.km / u.s
+        theta_rot = 2.26
+    rstar = star['solRad'] * u.solRad
+    dstar = star['pc'] * u.pc
+        print("Warning: Macroturbulence not found. Estimating from other properties.")
+        vmac = np.float('nan')
 			rstar = target['solRad'] * u.solRad
 			dstar = target['pc'] * u.pc
 			try:
