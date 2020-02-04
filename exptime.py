@@ -78,10 +78,10 @@ def time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, eff
 	return time_guess.si, SNR_sat
 
 def time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time, t_min, SNR, SNR_sat):
-	rv_actual, SNR_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, 2)
-	print("full well rv, snr", rv_actual, SNR_actual)
+	RV_actual, SNR_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, 2)
+	print("full well rv, snr", RV_actual, SNR_actual)
 	# from time_guess SNR_actual should equal SNR_sat, so we don't use it
-	time_actual = exptime * (rv_actual/sigma_v)**2
+	time_actual = exptime * (RV_actual/sigma_v)**2
 	time_actual_snr = exptime * (SNR/SNR_sat)**2
 	if (time_actual_snr > time_actual):
 		print("SNR requirement exceeds RV info requirement")
@@ -100,7 +100,8 @@ def time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac,
 		number_exposures = np.ceil((t_min+read_time)/(time_exposure+read_time))
 		time_actual = time_exposure*number_exposures
 		reads = read_time * number_exposures
-	return time_actual, reads, time_exposure, number_exposures, SNR_actual
+	RV_final, SNR_final = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, time_actual, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, 2)
+	return time_actual, reads, time_exposure, number_exposures, SNR_actual, RV_actual, SNR_final, RV_final
 
 if __name__ == '__main__':
 	# HARPS / ESO 3.6 m at La Silla
@@ -131,7 +132,7 @@ if __name__ == '__main__':
 	
 	sigma_v = 5e-5 # target single measurement photon noise precision in km/s
 	t_min = 0 * u.s # minimum exposure time in seconds. Typically 300 to even out p-mode oscillations
-	SNR = 10000
+	SNR = 300
 	#671 is supposed nominal, breakeven with RV is between 935 and 930
 	
 	# Atmo
@@ -143,7 +144,8 @@ if __name__ == '__main__':
 	λ_peak = λ_peak(Teff, λ_min, λ_max)
 	print("Exposure time test ("+str(sigma_v)+" km/s target precision) with HARPS on Alpha Cen B. 76 seconds on-sky expected.")
 	guess, SNR_sat = time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_peak, well_depth)
-	actual, readout, exposure, number, SNR_actual = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time, t_min, SNR, SNR_sat)
+	actual, readout, exposure, number, SNR_actual, RV_actual, SNR_final, RV_final = time_actual(sigma_v, Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, atmo, guess, efficiency, area, R, gain, read_noise, dark_current, n_pix, λ_min, λ_max, Δλ, read_time, t_min, SNR, SNR_sat)
 	print("guess, actual exposure, readout(s), total, 'real' individual exposure, number of exposures")
 	print(guess, actual, readout, actual+readout, exposure, number)
 	print("SNR in, SNR sat, SNR out", SNR, SNR_sat, SNR_actual)
+	print("RV_out, SNR_final (estimate), RV_final (estimate)", RV_actual, SNR_final, RV_final)

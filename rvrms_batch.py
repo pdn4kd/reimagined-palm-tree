@@ -39,21 +39,17 @@ for target in target_list:
 			Teff = target['K']
 			FeH = target['Sun']
 			logg = target['cms']
-    try:
-        vsini = np.float(star['kms']) * u.km / u.s
-        theta_rot = 1.13 * np.float(star['kms'])
-    except:
-        print("Warning: v * sin(i) not found. Assuming 2 km/s")
-        vsini = 2.0 * u.km / u.s
-        theta_rot = 2.26
-    if np.isnan(theta_rot):
-        print("Warning: v * sin(i) not found. Assuming 2 km/s")
-        vsini = 2.0 * u.km / u.s
-        theta_rot = 2.26
-    rstar = star['solRad'] * u.solRad
-    dstar = star['pc'] * u.pc
-        print("Warning: Macroturbulence not found. Estimating from other properties.")
-        vmac = np.float('nan')
+			try:
+				vsini = np.float(star['kms']) * u.km / u.s
+				theta_rot = 1.13 * np.float(star['kms'])
+			except:
+				print("Warning: v * sin(i) not found. Assuming 2 km/s")
+				vsini = 2.0 * u.km / u.s
+				theta_rot = 2.26
+			if np.isnan(theta_rot):
+				print("Warning: v * sin(i) not found. Assuming 2 km/s")
+				vsini = 2.0 * u.km / u.s
+				theta_rot = 2.26
 			rstar = target['solRad'] * u.solRad
 			dstar = target['pc'] * u.pc
 			try:
@@ -62,16 +58,16 @@ for target in target_list:
 			except:
 				print("Warning: Macroturbulence not found. Estimating from other properties.")
 				vmac = np.float('nan')
-			for i in star:
-				exptime = i['duration'] * u.minute
-				zenith_angle = (90-i['altitude'])*np.pi/180.0
-				airmass = np.exp(-sim.elevation/8400)/np.cos(zenith_angle)
-				n_expose = i['exposures']
-				photonrms, SNR_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, airmass, exptime, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, n_expose)
-				photonrms *= 1000
-				vrms = np.sqrt(photonrms**2+instrms**2)
-				vmeas = np.random.normal(0.0, vrms)
-				line = str(i['obs_start'])+","+str(i['obs_end'])+","+str(i['duration'])+","+str(i['altitude'])+","+str(i['azimuth'])+","+str(i['exposures'])+","+str(photonrms)+","+str(instrms)+","+str(vrms)+","+str(vmeas)+","+str(SNR_actual)+"\n"
-				star_rms.write(line)
-				print(vrms, vmeas)
+				for i in star:
+					exptime = i['duration'] * u.minute
+					zenith_angle = (90-i['altitude'])*np.pi/180.0
+					airmass = np.exp(-sim.elevation/8400)/np.cos(zenith_angle)
+					n_expose = i['exposures']
+					photonrms, SNR_actual = rvrms.rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, airmass, exptime, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_min, λ_max, Δλ, n_expose)
+					photonrms *= 1000
+					vrms = np.sqrt(photonrms**2+instrms**2)
+					vmeas = np.random.normal(0.0, vrms)
+					line = str(i['obs_start'])+","+str(i['obs_end'])+","+str(i['duration'])+","+str(i['altitude'])+","+str(i['azimuth'])+","+str(i['exposures'])+","+str(photonrms)+","+str(instrms)+","+str(vrms)+","+str(vmeas)+","+str(SNR_actual)+"\n"
+					star_rms.write(line)
+					print(vrms, vmeas)
 			star_rms.close()
