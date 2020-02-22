@@ -25,12 +25,16 @@ These are somewhat baroque/nonstandard names, which hopefully means that the use
 An example targetstars.csv is included for clarity.
 
 ''output file information''
-The file is in a quasi-Simbad format, with tabs between the major values (except for RA/Dec, which are seperated by a space). The "columns" are: # (an arbitrary number, set to 0 by default. This can be changed if desired); typed ident (a name for the target object); coord1 (ICRS,J2000/2000) (RA/DEC in HMS/DMS format); Mag V (V-band magnitude, usually apparent); spec type (Spectral Type)
+The eta_list.txt file is in a quasi-Simbad format, with tabs between the major values (except for RA/Dec, which are seperated by a space). The "columns" are: # (an arbitrary number, set to 0 by default. This can be changed if desired); typed ident (a name for the target object); coord1 (ICRS,J2000/2000) (RA/DEC in HMS/DMS format); Mag V (V-band magnitude, usually apparent); spec type (Spectral Type)
 ExpTime is total time spent in terms of imaging and readouts that the telescope spends pointed at a given target. ("wall-clock" time)
 
 SkyTime is the time with the shutter open staring at a given target (SingleExposure * N).
 
 SingleExposure is how long an individual exposure (excluding readout) as part of single epoch measurement takes.
+
+The eta_list.csv file is a CSV. The columns are currently: name, Exp time (total time the telescope spends on the target, including readouts in minutes), Sky Time (time spent actually observing the star, in minutes), Single Exposure (time for a single exposure, as a given observation can be multiple exposures, in minutes), Number of Exposures, SNR_approx (estimate of SNR for the exposure time calculator), RV_approx (estimate of the RV from the exposure time calculator, in km/s)
+
+The actual SNR and RV will vary slightly due to differing amounts of atmospheric scattering.
 
 #### exptime_demo.py
 Simple example of calculating exposure times across a range of magnitudes. Demonstrates that you can analytically get an exposure time if you have a target SNR. (Target radial velocities are rather more complex)
@@ -42,7 +46,7 @@ Example spectra are included (named 1700-9800, every 100 K below 7000 K and ever
 
 Current limitations: Detector properties not that closely based on actual hardware (especially sensitivity vs wavelength), microturbulence fixed at ~1 km/s; granulation/starspots/other jitter not considered; fixed assumptions made of Teff (200 K steps for RV information, must be between 2600 K and 7600 K inclusive, Stellar spectra in 100 K steps); wavelength ranges (400-2500 nm); spectrograph R values made based on wavelength range.
 
-The spectrograph issues bother pdn4kd greatly, and a way to not have to use the table (with its assumptions on R and wavelength ranges) would be greatly appreciated.
+The spectrograph issues bother pdn4kd greatly, and a way to not have to use the table (with its assumptions on R and wavelength ranges) would be greatly appreciated. Failing that, an extension of the table to 300 nm would be helpful, as would a more detailed atmospheric absorption model.
 
 #### rvrms_batch.py
-Convert observations found in dispatch_scheduler to radial velocities. Needs additional work due to fragility/assumptions. Requires the dispatch_scheduler repo, and it is primarily used to generate radial velocities from observations done there.
+Convert observations found in dispatch_scheduler to radial velocities. Needs additional work due to fragility/assumptions. Requires the dispatch_scheduler repo, and it is primarily used to generate radial velocity time series from observations done there.
