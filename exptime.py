@@ -34,7 +34,7 @@ def extinction(λ):
 	http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
 	http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
 	Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
-	Rayleigh scattering, and a general scattering absorption are considered, but the Water vapor, etc lines in the IR are not!'''
+	Rayleigh scattering, and a general scattering/absorption (handwaving together aerosols and ozone) are considered, but the Water vapor, etc lines in the IR are not!'''
 	return (0.09 + (3080.0/λ)**4)
 
 def airmass(zenith_angle, site_elevation=0, scale_height=8400):

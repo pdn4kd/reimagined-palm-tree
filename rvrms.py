@@ -12,10 +12,12 @@ Current limitations: Detector properties not closely based on actual hardware, m
 '''
 
 def extinction(λ):
-	# best guess, based on measurements at Texas A&M Univeristy, and CFHT in Mauka Kea
-	# http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
-	# http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
-	# Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
+	'''Returns atmospheric extinction coefficient (in magnitudes/airmass), given a wavelength (n Angstroms
+	best guess, based on measurements at Texas A&M Univeristy, and CFHT in Mauka Kea
+	http://www.gemini.edu/sciops/telescopes-and-sites/observing-condition-constraints/extinction
+	http://adsabs.harvard.edu/abs/1994IAPPP..57...12S
+	Values should not be considered trustworthy outside of ~3000-10000 Angstroms, and really 3500-9500 at that.
+	Rayleigh scattering, and a general scattering/absorption (handwaving together aerosols and ozone) are considered, but the Water vapor, etc lines in the IR are not!'''
 	return (0.09 + (3080.0/λ)**4)
 
 def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, exptime, efficiency, area, R, gain, read_noise, dark_current, n_pix, λmin, λmax, dλ, n_expose):
