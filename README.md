@@ -36,6 +36,9 @@ The eta_list.csv file is a CSV. The columns are currently: name, Exp time (total
 
 The actual SNR and RV will vary slightly due to differing amounts of atmospheric scattering.
 
+##### exptime_batch_mr.py and exptime_batch_gt.py
+Generate the exposure times with specific minimums based off of stellar p-mode oscillations. _mr scales with mass and radius (from a 300 second sun), and _gt from log(g) and T_eff (from a 3200 μHz sun). These are in contrast to the fixed 300 second minimum of the main exptime_batch.py
+
 #### exptime_demo.py
 Simple example of calculating exposure times across a range of magnitudes. Demonstrates that you can analytically get an exposure time if you have a target SNR. (Target radial velocities are rather more complex)
 
