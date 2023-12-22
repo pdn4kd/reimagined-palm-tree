@@ -58,7 +58,7 @@ for star in starlist:
     except:
         print("Warning: Macroturbulence not found. Estimating from other properties.")
         vmac = np.float('nan')
-    t_min = 1/(3100 * u.uHz * (Teff/5778) / np.sqrt(logg/4.438067627303176)) # Scaling from Luhn et al 2023 and Chaplin et al 2019. Solar value for log(g) and Teff via IAU figures
+    t_min = 1/(3100 * u.uHz * (logg/4.438067627303176) / np.sqrt(Teff/5778)) # Scaling from Luhn et al 2023 and Chaplin et al 2019. Solar value for log(g) and Teff via IAU figures
     dark_current = sim.instruments[0].dark_current / u.hour
     read_time = sim.instruments[0].read_time * u.s
     guess, SNR_sat = exptime.time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_peak, sim.instruments[0].well_depth)
