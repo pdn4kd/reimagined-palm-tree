@@ -3,7 +3,7 @@ Calculating all exposure times given a stellar input list. Requires a "targetsta
 
 This is a somewhat ad-hoc script, and you absolutely should edit it if you find other choices of headings clearer. Likewise sigma_v for differing precisions.
 
-This particular variant finds a minimum p-mode timescale based off of stellar mass and radius.
+This particular file finds a minimum p-mode timescale based off of surface gravity (actual) and effective temperature.
 '''
 
 import numpy as np
@@ -58,7 +58,7 @@ for star in starlist:
     except:
         print("Warning: Macroturbulence not found. Estimating from other properties.")
         vmac = float('nan')
-    t_min = 300 * u.s * np.sqrt(star['solRad']**3/star['Mstar']) # p-mode oscillation timescale, scaled by the dynamical timescale of the star. This defaults to 5 minutes for the Sun.
+    t_min = (1/(3100 * u.uHz * 10**(logg-4.438067627303176) / np.sqrt(Teff/5778))).si # Scaling from Luhn et al 2023 and Chaplin et al 2019. Solar value for log(g) and Teff via IAU figures
     dark_current = sim.instruments[0].dark_current / u.hour
     read_time = sim.instruments[0].read_time * u.s
     guess, SNR_sat = exptime.time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_peak, sim.instruments[0].well_depth)

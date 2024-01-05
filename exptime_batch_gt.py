@@ -3,7 +3,7 @@ Calculating all exposure times given a stellar input list. Requires a "targetsta
 
 This is a somewhat ad-hoc script, and you absolutely should edit it if you find other choices of headings clearer. Likewise sigma_v for differing precisions.
 
-This particular file finds a minimum p-mode timescale based off of surface gravity and effective temperature.
+This particular file finds a minimum p-mode timescale based off of surface gravity (log) and effective temperature.
 '''
 
 import numpy as np
@@ -40,8 +40,8 @@ for star in starlist:
     FeH = star['Sun']
     logg = star['cms']
     try:
-        vsini = np.float(star['kms']) * u.km / u.s
-        theta_rot = 1.13 * np.float(star['kms'])
+        vsini = float(star['kms']) * u.km / u.s
+        theta_rot = 1.13 * float(star['kms'])
     except:
         print("Warning: v * sin(i) not found. Assuming 2 km/s")
         vsini = 2.0 * u.km / u.s
@@ -57,8 +57,8 @@ for star in starlist:
         vmac + 1.0
     except:
         print("Warning: Macroturbulence not found. Estimating from other properties.")
-        vmac = np.float('nan')
-    t_min = 1/(3100 * u.uHz * (logg/4.438067627303176) / np.sqrt(Teff/5778)) # Scaling from Luhn et al 2023 and Chaplin et al 2019. Solar value for log(g) and Teff via IAU figures
+        vmac = float('nan')
+    t_min = (1/(3100 * u.uHz * (logg/4.438067627303176) / np.sqrt(Teff/5778))).si # Scaling from Luhn et al 2023 and Chaplin et al 2019. Solar value for log(g) and Teff via IAU figures
     dark_current = sim.instruments[0].dark_current / u.hour
     read_time = sim.instruments[0].read_time * u.s
     guess, SNR_sat = exptime.time_guess(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, vmac, atmo, sim.instruments[0].efficiency, area, sim.instruments[0].R, sim.instruments[0].gain, sim.instruments[0].read_noise, dark_current, sim.instruments[0].n_pix, λ_peak, sim.instruments[0].well_depth)
