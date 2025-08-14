@@ -40,8 +40,8 @@ for target in target_list:
 			FeH = target['Sun']
 			logg = target['cms']
 			try:
-				vsini = np.float(star['kms']) * u.km / u.s
-				theta_rot = 1.13 * np.float(star['kms'])
+				vsini = float(star['kms']) * u.km / u.s
+				theta_rot = 1.13 * float(star['kms'])
 			except:
 				print("Warning: v * sin(i) not found. Assuming 2 km/s")
 				vsini = 2.0 * u.km / u.s
@@ -57,7 +57,7 @@ for target in target_list:
 				vmac + 1.0
 			except:
 				print("Warning: Macroturbulence not found. Estimating from other properties.")
-				vmac = np.float('nan')
+				vmac = float('nan')
 				for i in star:
 					exptime = i['duration'] * u.minute
 					zenith_angle = (90-i['altitude'])*np.pi/180.0

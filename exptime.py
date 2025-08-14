@@ -128,7 +128,7 @@ if __name__ == '__main__':
 	dstar = 1.3 * u.pc
 	vsini = 2*np.pi*rstar/(38.7*u.day) * u.s/u.km
 	theta_rot = 1.13*vsini.si
-	v_mac = np.float('nan') # km/s, but exact value unclear
+	v_mac = float('nan') # km/s, but exact value unclear
 	
 	sigma_v = 5e-5 # target single measurement photon noise precision in km/s
 	t_min = 0 * u.s # minimum exposure time in seconds. Typically 300 to even out p-mode oscillations
