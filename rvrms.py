@@ -63,6 +63,7 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 		I_0[i][0] = BeattyWaves[i]
 
 	
+	SNR_actual = 0
 	# A resolution element is not 100 A long!
 	# R = l/dl, so 1 resolution element at wavelength lambda is lambda/R wide
 	# Or, a bin contains 100 A/(lambda/R) = 100A*R/lambda resolution elements
@@ -70,11 +71,9 @@ def rvcalc(Teff, FeH, logg, vsini, theta_rot, rstar, dstar, v_mac, airmass, expt
 		pix = n_pix*Δλ*R/I_0[λ][0]
 		# For now, assume equal signal per pixel. A gaussian would be better.
 		I_0[λ][3] = I_0[λ][2]/pix*gain / np.sqrt(I_0[λ][2]/pix*gain + (gain*read_noise*2.2*2*n_expose)**2 + (gain*dark_current*exptime)**2)
-		I_0[λ][4] = I_0[λ][3]**2 * pix / ((c.c/(u.km/u.s)).si * Δλ/I_0[λ][0])
-	SNR_actual = 0
-	for I_SNR in I_0:
-		if (I_SNR[3]> SNR_actual):
-			SNR_actual = I_SNR[3]
+		if (I_0[λ][3] > SNR_actual):
+			SNR_actual = I_0[λ][3]
+		I_0[λ][4] = I_0[λ][3]**2 * pix / (299792.458 * Δλ/I_0[λ][0])
 	
 	#print(I_0)
 	#print(sum(I_0[:,1]), "W/m^2")
